@@ -277,7 +277,7 @@ class BaseMinorCPU(BaseCPU):
     executeSetTraceTimeOnIssue = Param.Bool(False,
         "Set inst. trace times to be issue times")
 
-    executeAllowEarlyMemoryIssue = Param.Bool(True,
+    executeAllowEarlyMemoryIssue = Param.Bool(False,
         "Allow mem refs to be issued to the LSQ before reaching the head of"
         " the in flight insts queue")
 
@@ -286,6 +286,14 @@ class BaseMinorCPU(BaseCPU):
 
     branchPred = Param.BranchPredictor(TournamentBP(
         numThreads = Parent.numThreads), "Branch Predictor")
+    
+    num_lvpt_entries = Param.Int(1000, "Number of entries in load value prediction table")
+    
+    num_lct_entries = Param.Int(1000, "Number of entries in load classification table")
+    
+    num_cvt_entries = Param.Int(1000, "Number of entries in constant verification table")
+    
+    lct_bits_per_entry = Param.Int(1, "Number of bits in load classification saturating counter")
 
     def addCheckerCpu(self):
         print("Checker not yet supported by MinorCPU")

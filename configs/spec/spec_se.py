@@ -129,6 +129,10 @@ if '--ruby' in sys.argv:
 parser.add_argument("-b", "--benchmark", default="",
                  help="The benchmark to be loaded.")
 
+parser.add_argument("--num_lvpt_entries", type=int, default=1000)
+parser.add_argument("--num_lct_entries", type=int, default=1000)
+parser.add_argument("--num_cvt_entries", type=int, default=1000)
+parser.add_argument("--lct_bits_per_entry", type=int, default=1)
 
 args = parser.parse_args()
 
@@ -252,6 +256,12 @@ for i in range(np):
         system.cpu[i].branchPred.indirectBranchPred = indirectBPClass()
 
     system.cpu[i].createThreads()
+
+    system.cpu[i].num_lvpt_entries = args.num_lvpt_entries
+    system.cpu[i].num_lct_entries = args.num_lct_entries
+    system.cpu[i].num_cvt_entries = args.num_cvt_entries
+    system.cpu[i].lct_bits_per_entry = args.lct_bits_per_entry
+    
 
 if args.ruby:
     Ruby.create_system(args, False, system)

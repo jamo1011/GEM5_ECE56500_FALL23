@@ -48,6 +48,8 @@
 #include "debug/Branch.hh"
 #include "debug/Fetch.hh"
 #include "debug/MinorTrace.hh"
+#include "debug/LVPU.hh"
+#include "cpu/minor/lvpu.hh"
 
 namespace gem5
 {
@@ -63,7 +65,8 @@ Fetch2::Fetch2(const std::string &name,
     Latch<BranchData>::Output branchInp_,
     Latch<BranchData>::Input predictionOut_,
     Latch<ForwardInstData>::Input out_,
-    std::vector<InputBuffer<ForwardInstData>> &next_stage_input_buffer) :
+    std::vector<InputBuffer<ForwardInstData>> &next_stage_input_buffer,
+    LVPU* lvpu_) :
     Named(name),
     cpu(cpu_),
     inp(inp_),
@@ -75,7 +78,8 @@ Fetch2::Fetch2(const std::string &name,
     processMoreThanOneInput(params.fetch2CycleInput),
     branchPredictor(*params.branchPred),
     fetchInfo(params.numThreads),
-    threadPriority(0), stats(&cpu_)
+    threadPriority(0), stats(&cpu_),
+    lvpu(lvpu_)
 {
     if (outputWidth < 1)
         fatal("%s: decodeInputWidth must be >= 1 (%d)\n", name, outputWidth);
@@ -432,6 +436,22 @@ Fetch2::evaluate()
                         line_in->id,
                         line_in->lineWidth, output_index, fetch_info.inputIndex,
                         *fetch_info.pc, *dyn_inst);
+
+                    // Search for entry in LVPT
+                    if (decoded_inst->isLoad()) {
+                        int pc = dyn_inst->pc->instAddr();
+                        DPRINTF(LVPU,
+                            "Load detected.  Checking LVPT for %s\n",
+                            pc);
+                        if (lvpu->find_entry(pc) != -1) {
+                            DPRINTF(LVPU,
+                                "PC found in Load Value Prediction Table\n");
+                        } else {
+                            DPRINTF(LVPU,
+     "PC not found in Load Value Prediction Table.  Adding entry to table\n");
+                            lvpu->add_entry(pc);  //Dummy value, need to update when correct value is returned from mem
+                        }
+                    }
 
                     /*
                      * In SE mode, it's possible to branch to a microop when

@@ -55,6 +55,7 @@
 #include "cpu/minor/lsq.hh"
 #include "cpu/minor/pipe_data.hh"
 #include "cpu/minor/scoreboard.hh"
+#include "cpu/minor/lvpu.hh"
 
 namespace gem5
 {
@@ -121,6 +122,9 @@ class Execute : public Named
 
     /** Dcache port to pass on to the CPU.  Execute owns this */
     LSQ lsq;
+
+    /** Pointer to load value prediction unit */
+    LVPU* lvpu;
 
     /** Scoreboard of instruction dependencies */
     std::vector<Scoreboard> scoreboard;
@@ -325,7 +329,8 @@ class Execute : public Named
         MinorCPU &cpu_,
         const BaseMinorCPUParams &params,
         Latch<ForwardInstData>::Output inp_,
-        Latch<BranchData>::Input out_);
+        Latch<BranchData>::Input out_,
+        LVPU* lvpu_);
 
     ~Execute();
 
