@@ -232,6 +232,8 @@ Decode::evaluate()
                     decode_info.inMacroop = false;
                 }
 
+                DPRINTF(Decode, "Inst: %s, Disassembly: %s\n", *output_inst, output_inst->staticInst->disassemble(0,NULL));
+
                 /* Set execSeqNum of output_inst */
                 output_inst->id.execSeqNum = decode_info.execSeqNum;
                 /* Add tracing */

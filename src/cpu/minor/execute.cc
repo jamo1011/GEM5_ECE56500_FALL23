@@ -43,6 +43,7 @@
 #include "cpu/minor/exec_context.hh"
 #include "cpu/minor/fetch1.hh"
 #include "cpu/minor/lsq.hh"
+#include "cpu/minor/lvpu.hh"
 #include "cpu/op_class.hh"
 #include "debug/Activity.hh"
 #include "debug/Branch.hh"
@@ -53,6 +54,7 @@
 #include "debug/MinorMem.hh"
 #include "debug/MinorTrace.hh"
 #include "debug/PCEvent.hh"
+#include "debug/LVPU.hh"
 
 namespace gem5
 {
@@ -65,7 +67,9 @@ Execute::Execute(const std::string &name_,
     MinorCPU &cpu_,
     const BaseMinorCPUParams &params,
     Latch<ForwardInstData>::Output inp_,
-    Latch<BranchData>::Input out_) :
+    Latch<BranchData>::Input out_,
+    LVPT* lvpt_,
+    LCT* lct_) :
     Named(name_),
     inp(inp_),
     out(out_),
@@ -89,6 +93,8 @@ Execute::Execute(const std::string &name_,
         params.executeLSQTransfersQueueSize,
         params.executeLSQStoreBufferSize,
         params.executeLSQMaxStoreBufferStoresPerCycle),
+    lvpt(lvpt_),
+    lct(lct_),
     executeInfo(params.numThreads,
             ExecuteThreadInfo(params.executeCommitLimit)),
     interruptPriority(0),
@@ -383,6 +389,30 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
         /* Complete the memory access instruction */
         fault = inst->staticInst->completeAcc(packet, &context,
             inst->traceData);
+
+        //TODO: If load, update entry in LVPT.  compare with prediction, if misprediction, flush pipeline and reissue instructions
+        const RegId &reg = inst->staticInst->destRegIdx(0);
+        if (is_load and !reg.is(VecRegClass)) {
+            int pc = inst->pc->instAddr();
+            RegVal returned_value = context.thread.getReg(reg);
+            if (lvpt->valid_entry(pc)) {
+                // Compare predicted value with value returned from memory
+                RegVal predicted_value = lvpt->read_entry(pc);
+                if (lvpt->read_entry(pc) == returned_value) {
+                    lct->record_prediction(pc);
+                } else {
+                    lct->record_misprediction(pc);
+                }
+            } else {
+                DPRINTF(LVPU, "Valid LVPT entry not found.  Did not predict. Inst: %s\n",
+                        *inst);
+            }
+            lvpt->update_entry(pc, returned_value);
+        }
+
+        //TODO: If load and classified as a constant.  Skip/cancel mem access
+
+        //TODO: If store, update CVT if store address matches any entries
 
         if (fault != NoFault) {
             /* Invoke fault created by instruction completion */
