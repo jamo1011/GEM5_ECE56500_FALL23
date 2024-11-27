@@ -49,6 +49,7 @@
 #include "cpu/utils.hh"
 #include "debug/Activity.hh"
 #include "debug/MinorMem.hh"
+#include "debug/TEST.hh"
 
 namespace gem5
 {
@@ -1659,6 +1660,8 @@ LSQ::pushRequest(MinorDynInstPtr inst, bool isLoad, uint8_t *data,
     requests.push(request);
     inst->inLSQ = true;
     request->startAddrTranslation();
+    DPRINTF(TEST, "pushRequest: %s\n", request->request->hasVaddr());
+    DPRINTF(TEST, "pushRequest vaddr: %s\n", request->request->getVaddr());
 
     return inst->translationFault;
 }

@@ -50,6 +50,7 @@
 #include "base/named.hh"
 #include "cpu/minor/buffers.hh"
 #include "cpu/minor/cpu.hh"
+#include "cpu/minor/lvpu.hh"
 #include "cpu/minor/pipe_data.hh"
 #include "cpu/pred/bpred_unit.hh"
 #include "params/BaseMinorCPU.hh"
@@ -94,6 +95,9 @@ class Fetch2 : public Named
 
     /** Branch predictor passed from Python configuration */
     branch_prediction::BPredUnit &branchPredictor;
+
+    /** Load Value Predictor Table */
+    LVPU* lvpu;
 
   public:
     /* Public so that Pipeline can pass it to Fetch1 */
@@ -206,7 +210,8 @@ class Fetch2 : public Named
         Latch<BranchData>::Output branchInp_,
         Latch<BranchData>::Input predictionOut_,
         Latch<ForwardInstData>::Input out_,
-        std::vector<InputBuffer<ForwardInstData>> &next_stage_input_buffer);
+        std::vector<InputBuffer<ForwardInstData>> &next_stage_input_buffer,
+        LVPU* lvpu_);
 
   public:
     /** Pass on input/buffer data to the output if you can */

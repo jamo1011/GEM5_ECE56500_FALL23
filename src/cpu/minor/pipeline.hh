@@ -53,6 +53,7 @@
 #include "cpu/minor/fetch2.hh"
 #include "params/BaseMinorCPU.hh"
 #include "sim/ticked_object.hh"
+#include "cpu/minor/lvpu.hh"
 
 namespace gem5
 {
@@ -88,6 +89,8 @@ class Pipeline : public Ticked
     Decode decode;
     Fetch2 fetch2;
     Fetch1 fetch1;
+
+    LVPU lvpu;
 
     /** Activity recording for the pipeline.  This is access through the CPU
      *  by the pipeline stages but belongs to the Pipeline as it is the
