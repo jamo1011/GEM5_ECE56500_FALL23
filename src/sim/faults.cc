@@ -51,6 +51,8 @@
 #include "sim/full_system.hh"
 #include "sim/process.hh"
 
+#include "debug/MinorMem.hh"
+
 namespace gem5
 {
 
@@ -98,7 +100,10 @@ GenericPageTableFault::invoke(ThreadContext *tc, const StaticInstPtr &inst)
     if (!FullSystem) {
         Process *p = tc->getProcessPtr();
         handled = p->fixupFault(vaddr);
+        DPRINTF(MinorMem, "Test 4\n");
     }
+    DPRINTF(MinorMem, "Handeled: %s\n", handled);
+    DPRINTF(MinorMem, "Test 5\n");
     panic_if(!handled &&
                  !tc->getSystemPtr()->trapToGdb(SIGSEGV, tc->contextId()),
              "Page table fault when accessing virtual address %#x\n", vaddr);

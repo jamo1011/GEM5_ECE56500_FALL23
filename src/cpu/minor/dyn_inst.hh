@@ -200,6 +200,9 @@ class MinorDynInst : public RefCounted
     /** This instruction is in the LSQ, not a functional unit */
     bool inLSQ = false;
 
+    /** This instruction was classified as a constant, so memory access was not initiated */
+    bool constant_mem_bypass = false;
+
     /** Translation fault in case of a mem ref */
     Fault translationFault;
 

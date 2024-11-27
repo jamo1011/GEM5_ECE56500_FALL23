@@ -59,6 +59,7 @@ if env['CONF']['TARGET_ISA'] != 'null':
     Source('pipeline.cc')
     Source('scoreboard.cc')
     Source('stats.cc')
+    Source('lvpu.cc')
 
     DebugFlag('MinorCPU', 'Minor CPU-level events')
     DebugFlag('MinorExecute', 'Minor Execute stage')
@@ -67,6 +68,8 @@ if env['CONF']['TARGET_ISA'] != 'null':
     DebugFlag('MinorScoreboard', 'Minor Execute register scoreboard')
     DebugFlag('MinorTrace', 'MinorTrace cycle-by-cycle state trace')
     DebugFlag('MinorTiming', 'Extra timing for instructions')
+    DebugFlag('LVPU', 'Load value prediction unit')
+    DebugFlag('TEST', 'test')
 
     CompoundFlag('Minor', [
         'MinorCPU', 'MinorExecute', 'MinorInterrupt', 'MinorMem',

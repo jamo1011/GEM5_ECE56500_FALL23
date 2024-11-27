@@ -40,6 +40,7 @@
 #include "cpu/reg_class.hh"
 #include "debug/MinorScoreboard.hh"
 #include "debug/MinorTiming.hh"
+#include "debug/MinorExecute.hh"
 
 namespace gem5
 {
@@ -258,6 +259,10 @@ Scoreboard::canInstIssue(MinorDynInstPtr inst,
                 numUnpredictableResults[index] != 0)
             {
                 ret = false;
+                DPRINTF(MinorExecute,
+                    "Cannot issue inst.  Waiting on reg: %s \n",
+                    reg);
+            
             }
         }
         src_index++;

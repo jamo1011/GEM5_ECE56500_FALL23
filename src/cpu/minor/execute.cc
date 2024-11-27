@@ -43,6 +43,7 @@
 #include "cpu/minor/exec_context.hh"
 #include "cpu/minor/fetch1.hh"
 #include "cpu/minor/lsq.hh"
+#include "cpu/minor/lvpu.hh"
 #include "cpu/op_class.hh"
 #include "debug/Activity.hh"
 #include "debug/Branch.hh"
@@ -53,6 +54,8 @@
 #include "debug/MinorMem.hh"
 #include "debug/MinorTrace.hh"
 #include "debug/PCEvent.hh"
+#include "debug/LVPU.hh"
+#include "debug/TEST.hh"
 
 namespace gem5
 {
@@ -65,7 +68,8 @@ Execute::Execute(const std::string &name_,
     MinorCPU &cpu_,
     const BaseMinorCPUParams &params,
     Latch<ForwardInstData>::Output inp_,
-    Latch<BranchData>::Input out_) :
+    Latch<BranchData>::Input out_,
+    LVPU* lvpu_) :
     Named(name_),
     inp(inp_),
     out(out_),
@@ -81,6 +85,7 @@ Execute::Execute(const std::string &name_,
     setTraceTimeOnIssue(params.executeSetTraceTimeOnIssue),
     allowEarlyMemIssue(params.executeAllowEarlyMemoryIssue),
     noCostFUIndex(fuDescriptions.funcUnits.size() + 1),
+    lvpu(lvpu_),
     lsq(name_ + ".lsq", name_ + ".dcache_port",
         cpu_, *this,
         params.executeMaxAccessesInMemory,
@@ -88,7 +93,8 @@ Execute::Execute(const std::string &name_,
         params.executeLSQRequestsQueueSize,
         params.executeLSQTransfersQueueSize,
         params.executeLSQStoreBufferSize,
-        params.executeLSQMaxStoreBufferStoresPerCycle),
+        params.executeLSQMaxStoreBufferStoresPerCycle,
+        lvpu_),
     executeInfo(params.numThreads,
             ExecuteThreadInfo(params.executeCommitLimit)),
     interruptPriority(0),
@@ -355,7 +361,6 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
         } else {
             /* Take the fault raised during the TLB/memory access */
             fault = inst->translationFault;
-
             fault->invoke(thread, inst->staticInst);
         }
     } else if (!packet) {
@@ -383,6 +388,38 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
         /* Complete the memory access instruction */
         fault = inst->staticInst->completeAcc(packet, &context,
             inst->traceData);
+
+
+        // Compare prediction with value returned from memory.  Reissue if mispredicted
+        const RegId &reg = inst->staticInst->destRegIdx(0);
+        Addr pc = inst->pc->instAddr();
+        if (is_load and !reg.is(VecRegClass) and !inst->constant_mem_bypass) {
+            RegVal returned_value = context.thread.getReg(reg);
+            bool prediction_made = lvpu->is_predictable(pc); // Get value now because is_predictable might change during prediction_results
+            LVPU::PredictionResults results = lvpu->prediction_results(pc, returned_value);
+            if (results.entry_upgraded) {
+                //Add entry to CVT if is upgraded to constant
+                DPRINTF(LVPU, "Entry upgraded to constant: pc: %s\n", pc);
+                Addr mem_addr = packet->req->getVaddr();
+                lvpu->add_cvt_entry(pc, mem_addr);
+            }
+            if (prediction_made) {
+                lvpu->stats.num_predictions++;
+                if (results.misprediction) {
+                    DPRINTF(LVPU, "Load value misprediction, updating PC. inst: %s\n", *inst);
+                    lvpu->stats.incorrect_predictions++;
+                    // Set PC to one after mispredicted load to reissue all in-flight instructions
+                    std::unique_ptr<PCStateBase> next_pc(inst->pc->clone());
+                    inst->staticInst->advancePC(*next_pc);
+                    updateBranchData(thread_id, BranchData::Interrupt, inst,
+                        *next_pc, branch);
+                    // Any loads in the pipeline need to have scoreboard cleared 
+                } else {
+                    DPRINTF(LVPU, "Load value prediction correct. inst: %s\n", *inst);
+                    lvpu->stats.correct_predictions++;
+                }
+            }
+        }
 
         if (fault != NoFault) {
             /* Invoke fault created by instruction completion */
@@ -471,7 +508,11 @@ Execute::executeMemRefInst(MinorDynInstPtr inst, BranchData &branch,
         Fault init_fault = inst->staticInst->initiateAcc(&context,
             inst->traceData);
 
-        if (inst->inLSQ) {
+        if (inst->constant_mem_bypass) {
+            /* Restore thread PC */
+            thread->pcState(*old_pc);
+            issued = true;
+        } else if (inst->inLSQ) {
             if (init_fault != NoFault) {
                 assert(inst->translationFault != NoFault);
                 // Translation faults are dealt with in handleMemResponse()
@@ -505,7 +546,7 @@ Execute::executeMemRefInst(MinorDynInstPtr inst, BranchData &branch,
              * associated predicate register is all-false (and so will not
              * progress from here)  Try to branch to correct and branch
              * mis-prediction. */
-            if (!inst->inLSQ) {
+            if (!inst->inLSQ && !inst->constant_mem_bypass) {
                 /* Leave it up to commit to handle the fault */
                 lsq.pushFailedRequest(inst);
                 inst->inLSQ = true;
@@ -933,8 +974,23 @@ Execute::commitInst(MinorDynInstPtr inst, bool early_memory_issue,
          *  Execute::commit will commit it.
          */
         bool predicate_passed = false;
-        bool completed_mem_inst = executeMemRefInst(inst, branch,
-            predicate_passed, fault);
+
+        bool completed_mem_inst = executeMemRefInst(inst, branch, predicate_passed, fault);
+
+
+        if (inst->staticInst->isLoad() and (lvpu->is_predictable(inst->pc->instAddr()) || inst->constant_mem_bypass)) {
+            // Write to register and free in scoreboard
+            ExecContext context(cpu, *cpu.threads[thread_id], *this, inst);
+            DPRINTF(LVPU,"numDestRegs: %i\n", inst->staticInst->numDestRegs());
+            const RegId &reg = inst->staticInst->destRegIdx(0);
+            
+            scoreboard[thread_id].clearInstDests(inst, inst->isMemRef());
+            RegVal val = lvpu->read_entry(inst->pc->instAddr());
+            context.thread.setReg(reg, val);
+            DPRINTF(LVPU, "Setting reg with LVPT entry.  reg: %s, val: %s\n",
+                reg,
+                val);
+        }
 
         if (completed_mem_inst && fault != NoFault) {
             if (early_memory_issue) {
@@ -1111,6 +1167,7 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
         bool completed_mem_ref = false;
         bool issued_mem_ref = false;
         bool early_memory_issue = false;
+        bool load_prediction_made = false;
 
         /* Must set this again to go around the loop */
         completed_inst = false;
@@ -1135,8 +1192,8 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
             /* Branch as there was a change in PC */
             updateBranchData(thread_id, BranchData::UnpredictedBranch,
                 MinorDynInst::bubble(), thread->pcState(), branch);
-        } else if (mem_response &&
-            num_mem_refs_committed < memoryCommitLimit)
+        } else if (inst->constant_mem_bypass || (mem_response &&
+            num_mem_refs_committed < memoryCommitLimit))
         {
             /* Try to commit from the memory responses next */
             discard_inst = inst->id.streamSeqNum !=
@@ -1153,8 +1210,22 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
 
                 lsq.popResponse(mem_response);
             } else {
-                handleMemResponse(inst, mem_response, branch, fault);
+                //TODO: If load is a constant, don't run handleMemResponse.
+                Addr pc = inst->pc->instAddr();
+                load_prediction_made = lvpu->is_predictable(pc) and !inst->constant_mem_bypass; // Assume if is_predictable == True, than a prediction was made.  Need to track here because the value can change within handleMemResponse
+                if (!inst->constant_mem_bypass) {
+                    handleMemResponse(inst, mem_response, branch, fault);
+                } else {
+                    doInstCommitAccounting(inst);
+                }
                 committed_inst = true;
+                ThreadID thread_id = inst->id.threadId;
+                ExecContext context(cpu, *cpu.threads[thread_id], *this, inst);
+                const RegId &reg = inst->staticInst->destRegIdx(0);
+                if (inst->staticInst->isLoad() and !reg.is(VecRegClass)) {
+                    RegVal returned_value = context.thread.getReg(reg);
+                    DPRINTF(TEST, "Inst: %s, Load val: %s\n", *inst, returned_value);
+                }
             }
 
             completed_mem_ref = true;
@@ -1341,7 +1412,7 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
         }
 
         /* Mark the mem inst as being in the LSQ */
-        if (issued_mem_ref) {
+        if (issued_mem_ref and !inst->constant_mem_bypass) {
             inst->fuIndex = 0;
             inst->inLSQ = true;
         }
@@ -1380,8 +1451,9 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
                     " inst: %s committed: %d\n", *inst, committed_inst);
                 lsq.completeMemBarrierInst(inst, committed_inst);
             }
-
-            scoreboard[thread_id].clearInstDests(inst, inst->isMemRef());
+            if (!load_prediction_made or discard_inst) {
+                scoreboard[thread_id].clearInstDests(inst, inst->isMemRef());
+            }
         }
 
         /* Handle per-cycle instruction counting */
@@ -1567,6 +1639,7 @@ Execute::evaluate()
                 FUPipeline *fu = funcUnits[head_inst.inst->fuIndex];
                 if ((fu->stalled &&
                      fu->front().inst->id == head_inst.inst->id) ||
+                     head_inst.inst->constant_mem_bypass ||
                      lsq.findResponse(head_inst.inst))
                 {
                     head_inst_might_commit = true;

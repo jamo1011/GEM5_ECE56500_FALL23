@@ -53,6 +53,7 @@
 #include "cpu/minor/cpu.hh"
 #include "cpu/minor/pipe_data.hh"
 #include "cpu/minor/trace.hh"
+#include "cpu/minor/lvpu.hh"
 #include "mem/packet.hh"
 
 namespace gem5
@@ -121,6 +122,8 @@ class LSQ : public Named
     DcachePort dcachePort;
 
   public:
+    LVPU* lvpu;
+
     /** Derived SenderState to carry data access info. through address
      *  translation, the queues in this port and back from the memory
      *  system. */
@@ -651,7 +654,8 @@ class LSQ : public Named
         unsigned int max_accesses_in_memory_system, unsigned int line_width,
         unsigned int requests_queue_size, unsigned int transfers_queue_size,
         unsigned int store_buffer_size,
-        unsigned int store_buffer_cycle_store_limit);
+        unsigned int store_buffer_cycle_store_limit,
+        LVPU* lvpu_);
 
     virtual ~LSQ();
 

@@ -53,6 +53,7 @@
 #include "cpu/minor/fetch2.hh"
 #include "params/BaseMinorCPU.hh"
 #include "sim/ticked_object.hh"
+#include "cpu/minor/lvpu.hh"
 
 namespace gem5
 {
@@ -95,6 +96,8 @@ class Pipeline : public Ticked
     MinorActivityRecorder activityRecorder;
 
   public:
+    LVPU lvpu;
+    
     /** Enumerated ids of the 'stages' for the activity recorder */
     enum StageId
     {
