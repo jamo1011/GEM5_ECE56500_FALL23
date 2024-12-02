@@ -978,7 +978,7 @@ Execute::commitInst(MinorDynInstPtr inst, bool early_memory_issue,
             const RegId &reg = inst->staticInst->destRegIdx(0);
             RegVal val = lvpu->read_entry(pc);
             context.thread.setReg(reg, val);
-            DRINTF(LVPU, "Setting reg with LVPT entry.  reg: %s, val: %s",
+            DPRINTF(LVPU, "Setting reg with LVPT entry.  reg: %s, val: %s",
                 reg,
                 val);
             scoreboard[thread_id].clearInstDests(inst, inst->isMemRef());
