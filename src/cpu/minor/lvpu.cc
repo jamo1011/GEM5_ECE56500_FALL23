@@ -187,11 +187,12 @@ bool LVPU::is_constant(long unsigned int pc) {
 
 void LVPU::add_cvt_entry(long unsigned int pc, Addr address){
     //TODO
-    return
+    return;
 }
 
 void LVPU::update_store_addr(Addr address) {
-
+    //TODO
+    return;
 }
 
 } // namespace minor
