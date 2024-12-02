@@ -138,7 +138,7 @@ LVPU::LVPUStats::LVPUStats(MinorCPU *cpu)
 }
 
 bool LVPU::prediction_results(long unsigned int pc, RegVal value) {
-    bool correct_prediction = false;
+    bool misprediction = false;
     if (valid_entry(pc)) {
         // Compare predicted value with value returned from memory
         RegVal predicted_value = read_entry(pc);
@@ -147,18 +147,18 @@ bool LVPU::prediction_results(long unsigned int pc, RegVal value) {
             increment_counter(pc);
             stats.num_predictions++;
             stats.num_correct++;
-            correct_prediction = true;
         } else {
             DPRINTF(LVPU, "check_prediction: Incorrect prediction\n");
             decrement_counter(pc);
             stats.num_predictions++;
             stats.num_incorrect++;
+            misprediction = true;
         }
     } else {
         DPRINTF(LVPU, "check_prediction: Valid LVPT entry not found. \n");
     }
     update_entry(pc, value);
-    return correct_prediction;
+    return misprediction;
 }
 
 void LVPU::decrement_counter(long unsigned int pc) {
