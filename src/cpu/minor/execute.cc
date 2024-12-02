@@ -398,7 +398,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             RegVal returned_value = context.thread.getReg(reg);
             bool correct_prediction = lvpu->prediction_results(pc, returned_value);
             if (!correct_prediction) {
-                DPRINTF('Load value misprediction.\n');
+                DPRINTF(LVPU, 'Load value misprediction.\n');
                 //TODO: Cancel and reissue in-flight instructions
                 updateBranchData(thread_id, BranchData::Interrupt, inst,
                     *inst->pc, branch);
