@@ -962,11 +962,11 @@ Execute::commitInst(MinorDynInstPtr inst, bool early_memory_issue,
 
         bool completed_mem_inst;
         // Don't run executeMemRefInst if load is a constant
-        if !(inst->staticInst->isLoad() and lvpu->is_constant(inst->pc->instAddr())) {
+        if (inst->staticInst->isLoad() and lvpu->is_constant(inst->pc->instAddr())) {
+            completed_mem_inst = true;
+        } else {
             completed_mem_inst = executeMemRefInst(inst, branch,
             predicate_passed, fault);
-        } else {
-            completed_mem_inst = true;
         }
 
         if (inst->staticInst->isLoad() and lvpu->is_predictable(inst->pc_instAddr())) {
