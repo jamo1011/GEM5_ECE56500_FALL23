@@ -961,16 +961,24 @@ Execute::commitInst(MinorDynInstPtr inst, bool early_memory_issue,
         bool predicate_passed = false;
 
         bool completed_mem_inst;
+        long unsigned int pc = inst->pc->instAddr();
         // Don't run executeMemRefInst if load is a constant
-        if (inst->staticInst->isLoad() and lvpu->is_constant(inst->pc->instAddr())) {
+        if (inst->staticInst->isLoad() and lvpu->is_constant(pc)) {
             completed_mem_inst = true;
         } else {
             completed_mem_inst = executeMemRefInst(inst, branch,
             predicate_passed, fault);
         }
 
-        if (inst->staticInst->isLoad() and lvpu->is_predictable(inst->pc->instAddr())) {
+        if (inst->staticInst->isLoad() and lvpu->is_predictable(pc)) {
             //TODO Write to register and free in scoreboard
+            const RegId &reg = inst->staticInst->destRegIdx(0);
+            RegVal val = lvpu->read_entry(pc);
+            context.thread.setReg(reg, val);
+            DRINTF(LVPU, "Setting reg with LVPT entry.  reg: %s, val: %s",
+                reg,
+                val);
+            scoreboard[thread_id].clearInstDests(inst, inst->isMemRef());
         }
 
         if (completed_mem_inst && fault != NoFault) {
