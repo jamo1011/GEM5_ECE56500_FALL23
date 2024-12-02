@@ -969,7 +969,7 @@ Execute::commitInst(MinorDynInstPtr inst, bool early_memory_issue,
             predicate_passed, fault);
         }
 
-        if (inst->staticInst->isLoad() and lvpu->is_predictable(inst->pc_instAddr())) {
+        if (inst->staticInst->isLoad() and lvpu->is_predictable(inst->pc->instAddr())) {
             //TODO Write to register and free in scoreboard
         }
 
