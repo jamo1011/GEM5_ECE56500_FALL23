@@ -31,7 +31,8 @@ LVPU::LVPU(std::string name_,
     num_lvpt_entries(num_lvpt_entries_),
     num_lct_entries(num_lct_entries_),
     num_cvt_entries(num_cvt_entries_),
-    bits_per_entry(bits_per_entry_)
+    bits_per_entry(bits_per_entry_),
+    stats(&cpu_)
 {
     DPRINTF(LVPU, "LVPT created.\n");
 }
