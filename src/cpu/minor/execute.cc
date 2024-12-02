@@ -396,7 +396,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
         int pc = inst->pc->instAddr();
         if (is_load and !reg.is(VecRegClass)) {
             RegVal returned_value = context.thread.getReg(reg);
-            bool correct_prediction = lvpu->prediction_results(pc, returned_value)
+            bool correct_prediction = lvpu->prediction_results(pc, returned_value);
             if (!correct_prediction) {
                 //TODO: Cancel and reissue in-flight instructions
             }

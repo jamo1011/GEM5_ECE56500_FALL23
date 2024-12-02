@@ -58,7 +58,7 @@ void LVPU::add_entry(long unsigned int pc) {
     //TODO: Limit number of entries to num_entries
     //TODO: Figure out when to remove entries.  Based on classification?
     if (find_entry(pc) == -1) {
-        struct entry e = {pc, false, 0};
+        struct lvpt_entry e = {pc, false, 0};
         lvpt_table.push_back(e);
         DPRINTF(LVPU,
             "add_entry: Adding entry to LVPT. PC: %s, Number of entries: %s\n",
