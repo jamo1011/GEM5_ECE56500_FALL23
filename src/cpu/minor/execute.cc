@@ -977,10 +977,16 @@ Execute::commitInst(MinorDynInstPtr inst, bool early_memory_issue,
             ExecContext context(cpu, *cpu.threads[thread_id], *this, inst);
             const RegId &reg = inst->staticInst->destRegIdx(0);
             RegVal val = lvpu->read_entry(pc);
+            DPRINTF(LVPU, "Reg prior to setting.  reg: %s, val: %s\n",
+                reg,
+                contex.thead.getReg(reg));
             context.thread.setReg(reg, val);
-            DPRINTF(LVPU, "Setting reg with LVPT entry.  reg: %s, val: %s",
+            DPRINTF(LVPU, "Setting reg with LVPT entry.  reg: %s, val: %s\n",
                 reg,
                 val);
+            DPRINTF(LVPU, "Reg after setting.  reg: %s, val: %s\n",
+                reg,
+                contex.thead.getReg(reg));
             scoreboard[thread_id].clearInstDests(inst, inst->isMemRef());
         }
 
