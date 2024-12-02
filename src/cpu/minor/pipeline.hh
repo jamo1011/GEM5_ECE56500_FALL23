@@ -92,6 +92,7 @@ class Pipeline : public Ticked
 
     LVPT lvpt;
     LCT lct;
+    CVT cvt;
 
     /** Activity recording for the pipeline.  This is access through the CPU
      *  by the pipeline stages but belongs to the Pipeline as it is the

@@ -97,7 +97,7 @@ class Fetch2 : public Named
     branch_prediction::BPredUnit &branchPredictor;
 
     /** Load Value Predictor Table */
-    LVPT* lvpt;
+    LVPU* lvpu;
 
   public:
     /* Public so that Pipeline can pass it to Fetch1 */
@@ -211,7 +211,7 @@ class Fetch2 : public Named
         Latch<BranchData>::Input predictionOut_,
         Latch<ForwardInstData>::Input out_,
         std::vector<InputBuffer<ForwardInstData>> &next_stage_input_buffer,
-        LVPT* lvpt_);
+        LVPU* lvpu_);
 
   public:
     /** Pass on input/buffer data to the output if you can */

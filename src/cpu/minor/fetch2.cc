@@ -66,7 +66,7 @@ Fetch2::Fetch2(const std::string &name,
     Latch<BranchData>::Input predictionOut_,
     Latch<ForwardInstData>::Input out_,
     std::vector<InputBuffer<ForwardInstData>> &next_stage_input_buffer,
-    LVPT* lvpt_) :
+    LVPU* lvpu_) :
     Named(name),
     cpu(cpu_),
     inp(inp_),
@@ -79,7 +79,7 @@ Fetch2::Fetch2(const std::string &name,
     branchPredictor(*params.branchPred),
     fetchInfo(params.numThreads),
     threadPriority(0), stats(&cpu_),
-    lvpt(lvpt_)
+    lvpu(lvpu_)
 {
     if (outputWidth < 1)
         fatal("%s: decodeInputWidth must be >= 1 (%d)\n", name, outputWidth);
@@ -443,13 +443,13 @@ Fetch2::evaluate()
                         DPRINTF(LVPU,
                             "Load detected.  Checking LVPT for %s\n",
                             pc);
-                        if (lvpt->find_entry(pc) != -1) {
+                        if (lvpu->find_entry(pc) != -1) {
                             DPRINTF(LVPU,
                                 "PC found in Load Value Prediction Table\n");
                         } else {
                             DPRINTF(LVPU,
      "PC not found in Load Value Prediction Table.  Adding entry to table\n");
-                            lvpt->add_entry(pc);  //Dummy value, need to update when correct value is returned from mem
+                            lvpu->add_entry(pc);  //Dummy value, need to update when correct value is returned from mem
                         }
                     }
 

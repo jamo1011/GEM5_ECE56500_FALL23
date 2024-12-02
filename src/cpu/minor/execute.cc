@@ -68,8 +68,7 @@ Execute::Execute(const std::string &name_,
     const BaseMinorCPUParams &params,
     Latch<ForwardInstData>::Output inp_,
     Latch<BranchData>::Input out_,
-    LVPT* lvpt_,
-    LCT* lct_) :
+    LVPU* lvpu_) :
     Named(name_),
     inp(inp_),
     out(out_),
@@ -93,8 +92,7 @@ Execute::Execute(const std::string &name_,
         params.executeLSQTransfersQueueSize,
         params.executeLSQStoreBufferSize,
         params.executeLSQMaxStoreBufferStoresPerCycle),
-    lvpt(lvpt_),
-    lct(lct_),
+    lvpu(lvpu_),,
     executeInfo(params.numThreads,
             ExecuteThreadInfo(params.executeCommitLimit)),
     interruptPriority(0),
@@ -390,29 +388,27 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
         fault = inst->staticInst->completeAcc(packet, &context,
             inst->traceData);
 
-        //TODO: If load, update entry in LVPT.  compare with prediction, if misprediction, flush pipeline and reissue instructions
+        //TODO: if misprediction, flush pipeline and reissue instructions
+        // Compare prediction with value returned from memory.  Reissue if mispredicted
+
+
         const RegId &reg = inst->staticInst->destRegIdx(0);
+        int pc = inst->pc->instAddr();
         if (is_load and !reg.is(VecRegClass)) {
-            int pc = inst->pc->instAddr();
             RegVal returned_value = context.thread.getReg(reg);
-            if (lvpt->valid_entry(pc)) {
-                // Compare predicted value with value returned from memory
-                RegVal predicted_value = lvpt->read_entry(pc);
-                if (lvpt->read_entry(pc) == returned_value) {
-                    lct->record_prediction(pc);
-                } else {
-                    lct->record_misprediction(pc);
-                }
-            } else {
-                DPRINTF(LVPU, "Valid LVPT entry not found.  Did not predict. Inst: %s\n",
-                        *inst);
+            bool correct_prediction = lvpu->prediction_results(pc, returned_value)
+            if (!correct_prediction) {
+                //TODO: Cancel and reissue in-flight instructions
             }
-            lvpt->update_entry(pc, returned_value);
         }
 
         //TODO: If load and classified as a constant.  Skip/cancel mem access
 
-        //TODO: If store, update CVT if store address matches any entries
+        //TODO: If store, check for addresses in CVT
+        //Update CVT if store address matches any entries
+        //if (is_store) {
+        //    lvpu->update_store_addr(Address of instruction);
+        //}
 
         if (fault != NoFault) {
             /* Invoke fault created by instruction completion */
@@ -963,6 +959,8 @@ Execute::commitInst(MinorDynInstPtr inst, bool early_memory_issue,
          *  Execute::commit will commit it.
          */
         bool predicate_passed = false;
+
+        // TODO: Don't run executeMemRefInst if load is a constant
         bool completed_mem_inst = executeMemRefInst(inst, branch,
             predicate_passed, fault);
 
@@ -1183,6 +1181,7 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
 
                 lsq.popResponse(mem_response);
             } else {
+                //TODO: If load is a constant, don't run handleMemResponse.
                 handleMemResponse(inst, mem_response, branch, fault);
                 committed_inst = true;
             }

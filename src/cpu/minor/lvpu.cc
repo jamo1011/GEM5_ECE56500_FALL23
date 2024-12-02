@@ -21,25 +21,22 @@ GEM5_DEPRECATED_NAMESPACE(Minor, minor);
 namespace minor
 {
 
-LVPT::LVPT(std::string name_,
+LVPU::LVPU(std::string name_,
     MinorCPU &cpu_,
-    int num_entries_) :
+    int num_lvpt_entries_,
+    int num_lct_entries_,
+    int num_cvt_entries_,
+    int bits_per_entry_) :
     Named(name_),
-    num_entries(num_entries_)
+    num_lvpt_entries(num_lvpt_entries_),
+    num_lct_entries(num_lct_entries_),
+    num_cvt_entries(num_cvt_entries_),
+    bits_per_entry(bits_per_entry_)
 {
-    DPRINTF(LVPU,
-        "LVPT created.  num_entries: %s\n",
-        num_entries);
+    DPRINTF(LVPU, "LVPT created.\n");
 }
 
-LVPT::~LVPT()
-{
-    DPRINTF(LVPU,
-        "Deconstructing LVPT. Number of entries: %s",
-        lvpt_table.size());
-}
-
-int LVPT::find_entry(long unsigned int pc)
+int LVPU::find_entry(long unsigned int pc)
 {
     for (int i = 0; i < lvpt_table.size(); i++) {
         if (pc == lvpt_table[i].pc) {
@@ -57,7 +54,7 @@ int LVPT::find_entry(long unsigned int pc)
     return -1;
 }
 
-void LVPT::add_entry(long unsigned int pc) {
+void LVPU::add_entry(long unsigned int pc) {
     //TODO: Limit number of entries to num_entries
     //TODO: Figure out when to remove entries.  Based on classification?
     if (find_entry(pc) == -1) {
@@ -76,7 +73,7 @@ void LVPT::add_entry(long unsigned int pc) {
     return;
 }
 
-void LVPT::update_entry(long unsigned int pc, RegVal value) {
+void LVPU::update_entry(long unsigned int pc, RegVal value) {
     int entry_index = find_entry(pc);
     if (entry_index != -1) {
         lvpt_table[entry_index].value = value;
@@ -92,7 +89,7 @@ void LVPT::update_entry(long unsigned int pc, RegVal value) {
     }
 }
 
-bool LVPT::valid_entry(long unsigned int pc) {
+bool LVPU::valid_entry(long unsigned int pc) {
     bool valid = false;
     int entry_index = find_entry(pc);
     if (entry_index != -1) {
@@ -109,7 +106,7 @@ bool LVPT::valid_entry(long unsigned int pc) {
     return valid;
 }
 
-RegVal LVPT::read_entry(long unsigned int pc) {
+RegVal LVPU::read_entry(long unsigned int pc) {
     int entry_index = find_entry(pc);
     RegVal value;
     if (entry_index != -1 and valid_entry(pc)) {
@@ -122,7 +119,7 @@ RegVal LVPT::read_entry(long unsigned int pc) {
     return value;
 }
 
-LCT::LCTStats::LCTStats(MinorCPU *cpu)
+LVPU::LVPUStats::LVPUStats(MinorCPU *cpu)
     : statistics::Group(cpu, "lct"),
     ADD_STAT(num_predictions, statistics::units::Count::get(),
              "Number of LVPU predictions"),
@@ -139,32 +136,63 @@ LCT::LCTStats::LCTStats(MinorCPU *cpu)
         .flags(statistics::total);
 }
 
-LCT::LCT(std::string name_,
-    MinorCPU &cpu_,
-    int num_entries_) :
-    Named(name_),
-    num_entries(num_entries_),
-    stats(&cpu_)
-{
-    DPRINTF(LVPU,
-        "LCT created.  num_entries: %s\n",
-        num_entries);
+bool LVPU::prediction_results(long unsigned int pc, RegVal value) {
+    bool correct_prediction = False;
+    if (valid_entry(pc)) {
+        // Compare predicted value with value returned from memory
+        RegVal predicted_value = read_entry(pc);
+        if (predicted_value == value) {
+            DPRINTF(LVPU, "check_prediction: Correct prediction\n");
+            increment_counter(long unsigned int pc);
+            stats.num_predictions++;
+            stats.num_correct++;
+            correct_prediction = True;
+        } else {
+            DPRINTF(LVPU, "check_prediction: Incorrect prediction\n");
+            decrement_counter(long unsigned int pc);
+            stats.num_predictions++;
+            stats.num_incorrect++;
+        }
+    } else {
+        DPRINTF(LVPU, "check_prediction: Valid LVPT entry not found. \n");
+    }
+    update_entry(pc, value);
+    return correct_prediction
 }
 
-    // Increase saturating counter by one
-void LCT::record_prediction(long unsigned int pc) {
-    DPRINTF(LVPU, "record_prediction\n");
-    stats.num_predictions++;
-    stats.num_correct++;
+void LVPU::decrement_counter(long unsigned int pc) {
+    //TODO
+    return;
 }
 
-    // Decrease saturating counter by one
-void LCT::record_misprediction(long unsigned int pc) {
-    DPRINTF(LVPU, "record_misprediction\n");
-    stats.num_predictions++;
-    stats.num_incorrect++;
+void LVPU::increment_counter(long unsigned int pc) {
+    //TODO
+    return;
 }
 
+void LVPU::add_lct_entry(long unsigned int pc) {
+    //TODO
+    return;
+}
+
+bool LVPU::is_predictable(long unsigned int pc) {
+    //TODO
+    return True;
+}
+
+bool LVPU::is_constant(long unsigned int pc) {
+    //TODO
+    return False;
+}
+
+void LVPU::add_cvt_entry(long unsigned int pc, Addr address){
+    //TODO
+    return
+}
+
+void LVPU::update_store_addr(Addr address) {
+
+}
 
 } // namespace minor
 } // namespace gem5

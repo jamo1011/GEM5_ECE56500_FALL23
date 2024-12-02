@@ -123,11 +123,8 @@ class Execute : public Named
     /** Dcache port to pass on to the CPU.  Execute owns this */
     LSQ lsq;
 
-    /** Pointer to load value prediction table */
-    LVPT* lvpt;
-
-    /** Pointer to load classification table */
-    LCT* lct;
+    /** Pointer to load value prediction unit */
+    LVPU* lvpu;
 
     /** Scoreboard of instruction dependencies */
     std::vector<Scoreboard> scoreboard;
@@ -333,8 +330,7 @@ class Execute : public Named
         const BaseMinorCPUParams &params,
         Latch<ForwardInstData>::Output inp_,
         Latch<BranchData>::Input out_,
-        LVPT* lvpt_,
-        LCT* lct_);
+        LVPU* lvpu_);
 
     ~Execute();
 
