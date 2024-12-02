@@ -71,6 +71,9 @@ class LVPU : public Named
     /** Parameters for LVPT */
     int num_lvpt_entries;
 
+    /** Parameters for CVT */
+    int num_cvt_entries;
+
   public:
     LVPU(std::string name_,
       MinorCPU &cpu_,

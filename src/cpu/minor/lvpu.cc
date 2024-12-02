@@ -120,7 +120,7 @@ RegVal LVPU::read_entry(long unsigned int pc) {
 }
 
 LVPU::LVPUStats::LVPUStats(MinorCPU *cpu)
-    : statistics::Group(cpu, "lct"),
+    : statistics::Group(cpu, "lvpu"),
     ADD_STAT(num_predictions, statistics::units::Count::get(),
              "Number of LVPU predictions"),
     ADD_STAT(num_correct, statistics::units::Count::get(),
@@ -137,19 +137,19 @@ LVPU::LVPUStats::LVPUStats(MinorCPU *cpu)
 }
 
 bool LVPU::prediction_results(long unsigned int pc, RegVal value) {
-    bool correct_prediction = False;
+    bool correct_prediction = false;
     if (valid_entry(pc)) {
         // Compare predicted value with value returned from memory
         RegVal predicted_value = read_entry(pc);
         if (predicted_value == value) {
             DPRINTF(LVPU, "check_prediction: Correct prediction\n");
-            increment_counter(long unsigned int pc);
+            increment_counter(pc);
             stats.num_predictions++;
             stats.num_correct++;
-            correct_prediction = True;
+            correct_prediction = true;
         } else {
             DPRINTF(LVPU, "check_prediction: Incorrect prediction\n");
-            decrement_counter(long unsigned int pc);
+            decrement_counter(pc);
             stats.num_predictions++;
             stats.num_incorrect++;
         }
@@ -157,7 +157,7 @@ bool LVPU::prediction_results(long unsigned int pc, RegVal value) {
         DPRINTF(LVPU, "check_prediction: Valid LVPT entry not found. \n");
     }
     update_entry(pc, value);
-    return correct_prediction
+    return correct_prediction;
 }
 
 void LVPU::decrement_counter(long unsigned int pc) {
@@ -177,12 +177,12 @@ void LVPU::add_lct_entry(long unsigned int pc) {
 
 bool LVPU::is_predictable(long unsigned int pc) {
     //TODO
-    return True;
+    return true;
 }
 
 bool LVPU::is_constant(long unsigned int pc) {
     //TODO
-    return False;
+    return false;
 }
 
 void LVPU::add_cvt_entry(long unsigned int pc, Addr address){
