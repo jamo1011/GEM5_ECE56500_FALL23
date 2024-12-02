@@ -399,6 +399,8 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             bool correct_prediction = lvpu->prediction_results(pc, returned_value);
             if (!correct_prediction) {
                 //TODO: Cancel and reissue in-flight instructions
+                updateBranchData(thread_id, BranchData::Interrupt, inst,
+                    inst->pc, branch);
             }
         }
 
