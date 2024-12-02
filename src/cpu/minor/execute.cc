@@ -974,6 +974,7 @@ Execute::commitInst(MinorDynInstPtr inst, bool early_memory_issue,
 
         if (inst->staticInst->isLoad() and lvpu->is_predictable(pc)) {
             //TODO Write to register and free in scoreboard
+            ExecContext context(cpu, *cpu.threads[thread_id], *this, inst);
             const RegId &reg = inst->staticInst->destRegIdx(0);
             RegVal val = lvpu->read_entry(pc);
             context.thread.setReg(reg, val);
