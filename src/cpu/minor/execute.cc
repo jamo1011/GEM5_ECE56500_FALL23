@@ -400,7 +400,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             if (!correct_prediction) {
                 //TODO: Cancel and reissue in-flight instructions
                 updateBranchData(thread_id, BranchData::Interrupt, inst,
-                    inst->pc, branch);
+                    *inst->pc, branch);
             }
         }
 
