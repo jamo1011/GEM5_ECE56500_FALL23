@@ -398,6 +398,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             RegVal returned_value = context.thread.getReg(reg);
             bool correct_prediction = lvpu->prediction_results(pc, returned_value);
             if (!correct_prediction) {
+                DPRINTF('Load value misprediction.\n')
                 //TODO: Cancel and reissue in-flight instructions
                 updateBranchData(thread_id, BranchData::Interrupt, inst,
                     *inst->pc, branch);
@@ -976,18 +977,13 @@ Execute::commitInst(MinorDynInstPtr inst, bool early_memory_issue,
             //TODO Write to register and free in scoreboard
             ExecContext context(cpu, *cpu.threads[thread_id], *this, inst);
             const RegId &reg = inst->staticInst->destRegIdx(0);
+            
+            scoreboard[thread_id].clearInstDests(inst, inst->isMemRef());
             RegVal val = lvpu->read_entry(pc);
-            DPRINTF(LVPU, "Reg prior to setting.  reg: %s, val: %s\n",
-                reg,
-                context.thread.getReg(reg));
             context.thread.setReg(reg, val);
             DPRINTF(LVPU, "Setting reg with LVPT entry.  reg: %s, val: %s\n",
                 reg,
                 val);
-            DPRINTF(LVPU, "Reg after setting.  reg: %s, val: %s\n",
-                reg,
-                context.thread.getReg(reg));
-            scoreboard[thread_id].clearInstDests(inst, inst->isMemRef());
         }
 
         if (completed_mem_inst && fault != NoFault) {
