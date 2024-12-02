@@ -960,9 +960,18 @@ Execute::commitInst(MinorDynInstPtr inst, bool early_memory_issue,
          */
         bool predicate_passed = false;
 
-        // TODO: Don't run executeMemRefInst if load is a constant
-        bool completed_mem_inst = executeMemRefInst(inst, branch,
+        bool completed_mem_inst;
+        // Don't run executeMemRefInst if load is a constant
+        if !(inst->staticInst->isLoad() and lvpu->is_constant(inst->pc->instAddr())) {
+            completed_mem_inst = executeMemRefInst(inst, branch,
             predicate_passed, fault);
+        } else {
+            completed_mem_inst = true;
+        }
+
+        if (inst->staticInst->isLoad() and lvpu->is_predictable(inst->pc_instAddr())) {
+            //TODO Write to register and free in scoreboard
+        }
 
         if (completed_mem_inst && fault != NoFault) {
             if (early_memory_issue) {

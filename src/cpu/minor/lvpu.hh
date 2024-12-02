@@ -119,7 +119,7 @@ class LVPU : public Named
     // Returns true if entry is valid and is classified as 'Predictable' or 'Constant'
     bool is_predictable(long unsigned int pc);
 
-    // Returns true if entry is valid and classified as 'Constant'
+    // Returns true if the given pc has a valid LVPT entry, classified as 'Constant' in LCT, and has an entry in CVT
     bool is_constant(long unsigned int pc);
 
     /** CVT functions */
