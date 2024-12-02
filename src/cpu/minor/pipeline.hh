@@ -90,9 +90,7 @@ class Pipeline : public Ticked
     Fetch2 fetch2;
     Fetch1 fetch1;
 
-    LVPT lvpt;
-    LCT lct;
-    CVT cvt;
+    LVPU lvpu;
 
     /** Activity recording for the pipeline.  This is access through the CPU
      *  by the pipeline stages but belongs to the Pipeline as it is the

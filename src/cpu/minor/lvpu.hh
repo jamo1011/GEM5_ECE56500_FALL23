@@ -125,7 +125,7 @@ class LVPU : public Named
     // Checks for entries with address. Removes any entries that are found
     // Downgrades LCT entry to 'predictable'
     void update_store_addr(Addr address);
-}
+};
 
 } // namespace minor
 } // namespace gem5
