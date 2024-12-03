@@ -1431,7 +1431,7 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
                     " inst: %s committed: %d\n", *inst, committed_inst);
                 lsq.completeMemBarrierInst(inst, committed_inst);
             }
-            if (!inst->staticInst->isLoad() or !lvpu->is_predictable(pc)) {
+            if (!inst->staticInst->isLoad() or !lvpu->is_predictable(inst->pc->instAddr())) {
                 scoreboard[thread_id].clearInstDests(inst, inst->isMemRef());  
             }
         }
