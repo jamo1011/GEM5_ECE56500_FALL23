@@ -388,10 +388,8 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
         fault = inst->staticInst->completeAcc(packet, &context,
             inst->traceData);
 
-        //TODO: if misprediction, flush pipeline and reissue instructions
+
         // Compare prediction with value returned from memory.  Reissue if mispredicted
-
-
         const RegId &reg = inst->staticInst->destRegIdx(0);
         int pc = inst->pc->instAddr();
         if (is_load and !reg.is(VecRegClass)) {
@@ -976,7 +974,7 @@ Execute::commitInst(MinorDynInstPtr inst, bool early_memory_issue,
         }
 
         if (inst->staticInst->isLoad() and lvpu->is_predictable(pc)) {
-            //TODO Write to register and free in scoreboard
+            // Write to register and free in scoreboard
             ExecContext context(cpu, *cpu.threads[thread_id], *this, inst);
             const RegId &reg = inst->staticInst->destRegIdx(0);
             
@@ -1433,8 +1431,9 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
                     " inst: %s committed: %d\n", *inst, committed_inst);
                 lsq.completeMemBarrierInst(inst, committed_inst);
             }
-
-            scoreboard[thread_id].clearInstDests(inst, inst->isMemRef());
+            if (!inst->staticInst->isLoad() or !lvpu->is_predictable(pc)) {
+                scoreboard[thread_id].clearInstDests(inst, inst->isMemRef());  
+            }
         }
 
         /* Handle per-cycle instruction counting */
