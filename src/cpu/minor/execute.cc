@@ -401,9 +401,9 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
                 DPRINTF(LVPU, "Load value misprediction.\n");
                 //TODO: Cancel and reissue in-flight instructions
                 PCStateBase new_pc = *inst->pc;
-                pc->advance();
+                new_pc.advance();
                 updateBranchData(thread_id, BranchData::Interrupt, inst,
-                    pc, branch);
+                    new_pc, branch);
             }
         }
 
