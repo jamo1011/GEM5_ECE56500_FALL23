@@ -403,7 +403,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
                 std::unique_ptr<PCStateBase> next_pc(inst->pc->clone());
                 inst->staticInst->advancePC(*next_pc);
                 updateBranchData(thread_id, BranchData::Interrupt, inst,
-                    next_pc, branch);
+                    *next_pc, branch);
             }
         }
 
