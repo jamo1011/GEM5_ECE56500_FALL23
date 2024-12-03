@@ -399,11 +399,11 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             bool misprediction = lvpu->prediction_results(pc, returned_value);
             if (misprediction) {
                 DPRINTF(LVPU, "Load value misprediction.\n");
-                //TODO: Cancel and reissue in-flight instructions
-                PCStateBase new_pc = *inst->pc;
-                new_pc.advance();
+                // Set PC to one after mispredicted load to reissue all in-flight instructions
+                std::unique_ptr<PCStateBase> next_pc(pc->clone());
+                inst->staticInst->advancePC(*next_pc);
                 updateBranchData(thread_id, BranchData::Interrupt, inst,
-                    new_pc, branch);
+                    next_pc, branch);
             }
         }
 
