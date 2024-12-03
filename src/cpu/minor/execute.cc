@@ -396,7 +396,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             RegVal returned_value = context.thread.getReg(reg);
             bool misprediction = lvpu->prediction_results(pc, returned_value);
             if (misprediction) {
-                DPRINTF(LVPU, "Load value misprediction.\n");
+                DPRINTF(LVPU, "Load value misprediction. inst: %s\n", *inst);
                 // Set PC to one after mispredicted load to reissue all in-flight instructions
                 std::unique_ptr<PCStateBase> next_pc(inst->pc->clone());
                 inst->staticInst->advancePC(*next_pc);
