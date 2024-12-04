@@ -189,7 +189,7 @@ bool LVPU::is_predictable(long unsigned int pc) {
     // for 1 bit counter Predictable when classification == 1, unpredictable if classification == 0
     // for 2 bit counter predictable when classification == 2 or 3, unpredictable if classification == 0 or 1
 
-    if (hacks == 'never_predictable') {
+    if (hacks == "never_predictable") {
         return false;
     }
     return valid_entry(pc);
