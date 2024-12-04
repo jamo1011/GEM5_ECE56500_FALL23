@@ -59,7 +59,7 @@ Pipeline::Pipeline(MinorCPU &cpu_, const BaseMinorCPUParams &params) :
     Ticked(cpu_, &(cpu_.BaseCPU::baseStats.numCycles)),
     cpu(cpu_),
     allow_idling(params.enableIdling),
-    lvpu(cpu.name() + ".lvpu", cpu, params.num_lvpt_entries, params.num_lct_entries, params.num_cvt_entries, params.lct_bits_per_entry),
+    lvpu(cpu.name() + ".lvpu", cpu, params.num_lvpt_entries, params.num_lct_entries, params.num_cvt_entries, params.lct_bits_per_entry, params.lvpu_hacks),
     f1ToF2(cpu.name() + ".f1ToF2", "lines",
         params.fetch1ToFetch2ForwardDelay),
     f2ToF1(cpu.name() + ".f2ToF1", "prediction",

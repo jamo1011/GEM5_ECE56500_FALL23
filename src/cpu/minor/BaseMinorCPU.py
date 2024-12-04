@@ -295,6 +295,8 @@ class BaseMinorCPU(BaseCPU):
     
     lct_bits_per_entry = Param.Int(1, "Number of bits in load classification saturating counter")
 
+    lvpu_hacks = Param.String("Hacks for Load value prediction unit")
+
     def addCheckerCpu(self):
         print("Checker not yet supported by MinorCPU")
         exit(1)

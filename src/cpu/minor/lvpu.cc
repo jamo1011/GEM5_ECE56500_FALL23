@@ -26,12 +26,14 @@ LVPU::LVPU(std::string name_,
     int num_lvpt_entries_,
     int num_lct_entries_,
     int num_cvt_entries_,
-    int bits_per_entry_) :
+    int bits_per_entry_,
+    std::string hacks_) :
     Named(name_),
     num_lvpt_entries(num_lvpt_entries_),
     num_lct_entries(num_lct_entries_),
     num_cvt_entries(num_cvt_entries_),
     bits_per_entry(bits_per_entry_),
+    hacks(hacks_),
     stats(&cpu_)
 {
     DPRINTF(LVPU, "LVPT created. num_lvpt_entries: %s, num_lct_entries: %s, num_cvt_entries: %s, lct_bits_per_entry: %s\n",
@@ -186,6 +188,10 @@ bool LVPU::is_predictable(long unsigned int pc) {
     // Predictable when lvpt has a valid entry and lct classified as predictable
     // for 1 bit counter Predictable when classification == 1, unpredictable if classification == 0
     // for 2 bit counter predictable when classification == 2 or 3, unpredictable if classification == 0 or 1
+
+    if (hacks == 'never_predictable') {
+        return false
+    }
     return valid_entry(pc);
 }
 
