@@ -396,9 +396,10 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
         int pc = inst->pc->instAddr();
         if (is_load and !reg.is(VecRegClass)) {
             RegVal returned_value = context.thread.getReg(reg);
+            bool prediction_made = lvpu->is_predictable(pc); // Get value now because is_predictable might change during prediction_results
             bool misprediction = lvpu->prediction_results(pc, returned_value);
-            if (misprediction) {
-                DPRINTF(LVPU, "Load value misprediction. inst: %s\n", *inst);
+            if (prediction_made && misprediction) {
+                DPRINTF(LVPU, "Load value misprediction, updating PC. inst: %s\n", *inst);
                 // Set PC to one after mispredicted load to reissue all in-flight instructions
                 std::unique_ptr<PCStateBase> next_pc(inst->pc->clone());
                 inst->staticInst->advancePC(*next_pc);
@@ -1165,7 +1166,7 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
         bool completed_mem_ref = false;
         bool issued_mem_ref = false;
         bool early_memory_issue = false;
-        bool load_prediction = false;
+        bool load_prediction_made = false;
 
         /* Must set this again to go around the loop */
         completed_inst = false;
@@ -1209,7 +1210,7 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
                 lsq.popResponse(mem_response);
             } else {
                 //TODO: If load is a constant, don't run handleMemResponse.
-                load_prediction = lvpu->is_predictable(inst->pc->instAddr()); // Need to track is_predictable here because the value can change within handleMemResponse
+                load_prediction_made = lvpu->is_predictable(inst->pc->instAddr()); // Assume if is_predictable == True, than a prediction was made.  Need to track here because the value can change within handleMemResponse
                 handleMemResponse(inst, mem_response, branch, fault);
                 committed_inst = true;
             }
@@ -1437,7 +1438,7 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
                     " inst: %s committed: %d\n", *inst, committed_inst);
                 lsq.completeMemBarrierInst(inst, committed_inst);
             }
-            if (!load_prediction or discard_inst) {
+            if (!load_prediction_made or discard_inst) {
                 scoreboard[thread_id].clearInstDests(inst, inst->isMemRef());
             }
         }
