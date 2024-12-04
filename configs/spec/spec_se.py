@@ -133,6 +133,7 @@ parser.add_argument("--num_lvpt_entries", type=int, default=1000)
 parser.add_argument("--num_lct_entries", type=int, default=1000)
 parser.add_argument("--num_cvt_entries", type=int, default=1000)
 parser.add_argument("--lct_bits_per_entry", type=int, default=1)
+parser.add_argument("--lvpu_hacks", type=str)
 
 args = parser.parse_args()
 
@@ -261,6 +262,7 @@ for i in range(np):
     system.cpu[i].num_lct_entries = args.num_lct_entries
     system.cpu[i].num_cvt_entries = args.num_cvt_entries
     system.cpu[i].lct_bits_per_entry = args.lct_bits_per_entry
+    system.cpu[i].lvpu_hacks = args.lvpu_hacks
     
 
 if args.ruby:

@@ -443,12 +443,15 @@ Fetch2::evaluate()
                         DPRINTF(LVPU,
                             "Load detected.  Checking LVPT for %s\n",
                             pc);
-                        if (lvpu->find_entry(pc) != -1) {
+                        if (dyn_inst->staticInst->numDestRegs() != 1) {
+                            DPRINTF(LVPU,
+                                "Load does not have 1 destination register. Not adding to LVPT\n");
+                        } else if (lvpu->find_entry(pc) != -1) {
                             DPRINTF(LVPU,
                                 "PC found in Load Value Prediction Table\n");
                         } else {
                             DPRINTF(LVPU,
-     "PC not found in Load Value Prediction Table.  Adding entry to table\n");
+                                "PC not found in Load Value Prediction Table.  Adding entry to table\n");
                             lvpu->add_entry(pc);  //Dummy value, need to update when correct value is returned from mem
                         }
                     }
