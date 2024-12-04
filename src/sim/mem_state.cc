@@ -37,6 +37,7 @@
 #include "sim/syscall_debug_macros.hh"
 #include "sim/system.hh"
 #include "sim/vma.hh"
+#include "debug/MinorMem.hh"
 
 namespace gem5
 {
@@ -413,6 +414,7 @@ MemState::fixupFault(Addr vaddr)
                     vma.fillMemPages(vpage_start, _pageBytes, virt_mem);
                 }
             }
+            DPRINTF(MinorMem, "Test 1\n");
             return true;
         }
     }
@@ -426,6 +428,8 @@ MemState::fixupFault(Addr vaddr)
      */
     if (vaddr >= _stackMin && vaddr < _stackBase) {
         _ownerProcess->allocateMem(roundDown(vaddr, _pageBytes), _pageBytes);
+        
+        DPRINTF(MinorMem, "Test 2\n");
         return true;
     }
 
@@ -442,9 +446,12 @@ MemState::fixupFault(Addr vaddr)
             _ownerProcess->allocateMem(_stackMin, _pageBytes);
             inform("Increasing stack size by one page.");
         }
+        
+        DPRINTF(MinorMem, "Test 3\n");
         return true;
     }
-
+    
+    DPRINTF(MinorMem, "Test 4\n");
     return false;
 }
 
