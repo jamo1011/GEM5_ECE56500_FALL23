@@ -425,7 +425,10 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
         // What happens if a constant load immediately follows a matching store
         if (is_store) {
             Addr mem_addr = packet->req->getVaddr();
-            lvpu->update_store_addr(mem_addr);
+            std::vector<Addr> removed_entries = lvpu->update_store_addr(mem_addr);
+            for (auto pc in removed_entries) {
+                // Need to trigger a branch if any downgraded load instructions are currently issued
+            }
         }
 
         if (fault != NoFault) {
