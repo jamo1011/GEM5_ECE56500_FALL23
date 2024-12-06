@@ -420,14 +420,12 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             }
         }
 
-        //TODO: If store, check for addresses in CVT
-        //Update CVT if store address matches any entries
-        // What happens if a constant load immediately follows a matching store
         if (is_store) {
+            //Update CVT if store address matches any entries
             Addr mem_addr = packet->req->getVaddr();
             std::vector<Addr> removed_entries = lvpu->update_store_addr(mem_addr);
             for (auto pc in removed_entries) {
-                // Need to trigger a branch if any downgraded load instructions are currently issued
+                // TODO: Need to trigger a branch if any downgraded load instructions are currently issued
             }
         }
 
