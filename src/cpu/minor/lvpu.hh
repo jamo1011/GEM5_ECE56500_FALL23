@@ -141,7 +141,8 @@ class LVPU : public Named
 
     // Checks for entries with address.
     // If any entries are found, remove them and downgrade LCT entry to 'predictable'
-    void update_store_addr(Addr address);
+    // Returns list of PCs of entries that were removed
+    std::vector<Addr> update_store_addr(Addr address);
 };
 
 } // namespace minor

@@ -265,17 +265,17 @@ void LVPU::add_cvt_entry(Addr pc, Addr mem_addr) {
     return;
 }
 
-void LVPU::update_store_addr(Addr mem_addr) {
+std::vector<Addr> LVPU::update_store_addr(Addr mem_addr) {
     std::vector<Addr> entries_removed;
     for (int i = cv_table.size()-1; i >= 0; i--) {
         DPRINTF(LVPU, "TEST5\n");
         if (cv_table[i].mem_addr == mem_addr) {
-            DPRINTF(LVPU, "update_store_addr.  matching entry found for mem_addr: %s\n", mem_addr);
-            //entries_removed.push_back(cv_table[i].pc);
-            //cv_table.erase(cv_table.begin() + i);
+            DPRINTF(LVPU, "update_store_addr.  matching entry found for mem_addr: %s, downgrading entry: %s\n", mem_addr, cv_table[i].pc);
+            entries_removed.push_back(cv_table[i].pc);
+            cv_table.erase(cv_table.begin() + i);
         }
     }
-    return;
+    return entries_removed;
 }
 
 } // namespace minor
