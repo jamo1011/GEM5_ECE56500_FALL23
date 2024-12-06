@@ -424,7 +424,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             //Update CVT if store address matches any entries
             Addr mem_addr = packet->req->getVaddr();
             std::vector<Addr> removed_entries = lvpu->update_store_addr(mem_addr);
-            for (auto pc in removed_entries) {
+            for (auto pc : removed_entries) {
                 // TODO: Need to trigger a branch if any downgraded load instructions are currently issued
             }
         }
