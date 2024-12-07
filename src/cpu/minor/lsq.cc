@@ -1482,6 +1482,7 @@ LSQ::step()
 {
     /* Try to move address-translated requests between queues and issue
      *  them */
+    DPRINTF(LVPU, "TEST6\n");
     if (!requests.empty())
         tryToSendToTransfers(requests.front());
 
@@ -1492,9 +1493,10 @@ LSQ::LSQRequestPtr
 LSQ::findResponse(MinorDynInstPtr inst)
 {
     LSQ::LSQRequestPtr ret = NULL;
-
+    DPRINTF(LVPU, "findResponse: inst pc: %s\n", inst->pc->instAddr());
     if (!transfers.empty()) {
         LSQRequestPtr request = transfers.front();
+        DPRINTF(LVPU, "findResponse: request inst pc: %s\n", request->inst->pc->instAddr());
 
         /* Same instruction and complete access or a store that's
          *  capable of being moved to the store buffer */
@@ -1595,6 +1597,7 @@ LSQ::pushRequest(MinorDynInstPtr inst, bool isLoad, uint8_t *data,
     DPRINTF(LVPU, "%s", lvpu->valid_entry(inst->pc->instAddr()));
     DPRINTF(LVPU, "TEST4\n");
     bool constant = lvpu->is_constant(inst->pc->instAddr(), addr);
+    inst->constant_mem_bypass = false;
     DPRINTF(LVPU, "TEST2\n");
     if (isLoad && constant) {
         DPRINTF(LVPU, "pushRequest: Load is constant, skipping memory access\n");
@@ -1686,6 +1689,7 @@ LSQ::pushRequest(MinorDynInstPtr inst, bool isLoad, uint8_t *data,
 void
 LSQ::pushFailedRequest(MinorDynInstPtr inst)
 {
+    DPRINTF(LVPU, "TEST8\n");
     LSQRequestPtr request = new FailedDataRequest(*this, inst);
     requests.push(request);
 }

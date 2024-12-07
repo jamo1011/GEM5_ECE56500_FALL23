@@ -399,12 +399,15 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             LVPU::PredictionResults results = lvpu->prediction_results(pc, returned_value);
             if (results.entry_upgraded) {
                 //Add entry to CVT if is upgraded to constant
+                DPRINTF(LVPU, "Entry upgraded to constant: pc: %s", pc);
                 Addr mem_addr = packet->req->getVaddr();
                 lvpu->add_cvt_entry(pc, mem_addr);
             }
             if (prediction_made) {
+                lvpu->stats.num_predictions++;
                 if (results.misprediction) {
                     DPRINTF(LVPU, "Load value misprediction, updating PC. inst: %s\n", *inst);
+                    lvpu->stats.incorrect_predictions++;
                     // Set PC to one after mispredicted load to reissue all in-flight instructions
                     std::unique_ptr<PCStateBase> next_pc(inst->pc->clone());
                     inst->staticInst->advancePC(*next_pc);
@@ -413,6 +416,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
                     // Any loads in the pipeline need to have scoreboard cleared 
                 } else {
                     DPRINTF(LVPU, "Load value prediction correct. inst: %s\n", *inst);
+                    lvpu->stats.correct_predictions++;
                 }
             }
         }
@@ -422,6 +426,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             Addr mem_addr = packet->req->getVaddr();
             std::vector<Addr> removed_entries = lvpu->update_store_addr(mem_addr);
             for (auto pc : removed_entries) {
+                
                 // TODO: Need to trigger a branch if any downgraded load instructions are currently issued
             }
         }
@@ -551,8 +556,9 @@ Execute::executeMemRefInst(MinorDynInstPtr inst, BranchData &branch,
              * associated predicate register is all-false (and so will not
              * progress from here)  Try to branch to correct and branch
              * mis-prediction. */
-            if (!inst->inLSQ) {
+            if (!inst->inLSQ && !inst->constant_mem_bypass) {
                 /* Leave it up to commit to handle the fault */
+                DPRINTF(LVPU, "TEST9\n");
                 lsq.pushFailedRequest(inst);
                 inst->inLSQ = true;
             }
@@ -983,7 +989,7 @@ Execute::commitInst(MinorDynInstPtr inst, bool early_memory_issue,
         bool completed_mem_inst = executeMemRefInst(inst, branch, predicate_passed, fault);
 
 
-        if (inst->staticInst->isLoad() and lvpu->is_predictable(inst->pc->instAddr())) {
+        if (inst->staticInst->isLoad() and (lvpu->is_predictable(inst->pc->instAddr()) || inst->constant_mem_bypass)) {
             // Write to register and free in scoreboard
             ExecContext context(cpu, *cpu.threads[thread_id], *this, inst);
             DPRINTF(LVPU,"numDestRegs: %i\n", inst->staticInst->numDestRegs());
@@ -1197,8 +1203,8 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
             /* Branch as there was a change in PC */
             updateBranchData(thread_id, BranchData::UnpredictedBranch,
                 MinorDynInst::bubble(), thread->pcState(), branch);
-        } else if (mem_response &&
-            num_mem_refs_committed < memoryCommitLimit)
+        } else if (inst->constant_mem_bypass || (mem_response &&
+            num_mem_refs_committed < memoryCommitLimit))
         {
             /* Try to commit from the memory responses next */
             discard_inst = inst->id.streamSeqNum !=
@@ -1217,8 +1223,8 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
             } else {
                 //TODO: If load is a constant, don't run handleMemResponse.
                 Addr pc = inst->pc->instAddr();
-                load_prediction_made = lvpu->is_predictable(pc) and inst->constant_mem_bypass; // Assume if is_predictable == True, than a prediction was made.  Need to track here because the value can change within handleMemResponse
-                if (inst->constant_mem_bypass) {
+                load_prediction_made = lvpu->is_predictable(pc) and !inst->constant_mem_bypass; // Assume if is_predictable == True, than a prediction was made.  Need to track here because the value can change within handleMemResponse
+                if (!inst->constant_mem_bypass) {
                     handleMemResponse(inst, mem_response, branch, fault);
                 }
                 committed_inst = true;
@@ -1408,7 +1414,7 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
         }
 
         /* Mark the mem inst as being in the LSQ */
-        if (issued_mem_ref) {
+        if (issued_mem_ref and !inst->constant_mem_bypass) {
             inst->fuIndex = 0;
             inst->inLSQ = true;
         }
@@ -1633,8 +1639,10 @@ Execute::evaluate()
                 head_inst_might_commit = true;
             } else {
                 FUPipeline *fu = funcUnits[head_inst.inst->fuIndex];
+                DPRINTF(LVPU,"TEST10\n");
                 if ((fu->stalled &&
                      fu->front().inst->id == head_inst.inst->id) ||
+                     head_inst.inst->constant_mem_bypass ||
                      lsq.findResponse(head_inst.inst))
                 {
                     head_inst_might_commit = true;
@@ -1782,6 +1790,7 @@ Execute::getCommittingThread()
             QueuedInst *head_inflight_inst = &(ex_info.inFlightInsts->front());
             MinorDynInstPtr inst = head_inflight_inst->inst;
 
+            DPRINTF(LVPU, "TEST11: inLSQ: %s\n", inst->inLSQ);
             can_commit_insts = can_commit_insts &&
                 (!inst->inLSQ || (lsq.findResponse(inst) != NULL));
 
@@ -1811,6 +1820,7 @@ Execute::getCommittingThread()
 
                 can_commit_insts = can_commit_insts &&
                     (can_transfer_mem_inst || can_execute_fu_inst);
+                DPRINTF(LVPU, "TEST12: can_commit: %s\n", can_commit_insts);
             }
         }
 

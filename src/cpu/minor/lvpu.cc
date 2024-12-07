@@ -136,7 +136,7 @@ LVPU::LVPUStats::LVPUStats(MinorCPU *cpu)
     ADD_STAT(incorrect_predictions, statistics::units::Count::get(),
              "Number of incorrect LVPU predictions"),
     ADD_STAT(memory_bypasses, statistics::units::Count::get(),
-             "Number of incorrect LVPU predictions")
+             "Number of memory bypasses from constant loads")
 {
     num_predictions
         .flags(statistics::total);
@@ -160,17 +160,13 @@ LVPU::PredictionResults LVPU::prediction_results(Addr pc, RegVal value) {
             Classification previous_classification = get_classification(pc);
             increment_counter(pc);
             Classification new_classification = get_classification(pc);
-            if (previous_classification == Predictable && new_classification == Constant) {
+            if (previous_classification != Constant && new_classification == Constant) {
                 DPRINTF(LVPU, "prediction_results: Entry upgraded to constant. pc: %s\n", pc);
                 entry_upgraded = true;
             }
-            stats.num_predictions++;
-            stats.correct_predictions++;
         } else {
             DPRINTF(LVPU, "prediction_results: Incorrect prediction\n");
             decrement_counter(pc);
-            stats.num_predictions++;
-            stats.incorrect_predictions++;
             misprediction = true;
         }
     } else {
@@ -267,7 +263,7 @@ bool LVPU::is_predictable(Addr pc) {
     // for 2 bit counter predictable when classification == 2 or 3, unpredictable if classification == 0 or 1
 
     // Disables load value prediction.  Registers should not be written to and lvpu should not issue a branch
-    if (hacks == "never_predictable") {
+    if (hacks == "never_predictable" or hacks == "constant_only") {
         return false;
     }
     //TODO
