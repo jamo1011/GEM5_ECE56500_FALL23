@@ -85,6 +85,7 @@ Execute::Execute(const std::string &name_,
     setTraceTimeOnIssue(params.executeSetTraceTimeOnIssue),
     allowEarlyMemIssue(params.executeAllowEarlyMemoryIssue),
     noCostFUIndex(fuDescriptions.funcUnits.size() + 1),
+    lvpu(lvpu_),
     lsq(name_ + ".lsq", name_ + ".dcache_port",
         cpu_, *this,
         params.executeMaxAccessesInMemory,
@@ -92,8 +93,8 @@ Execute::Execute(const std::string &name_,
         params.executeLSQRequestsQueueSize,
         params.executeLSQTransfersQueueSize,
         params.executeLSQStoreBufferSize,
-        params.executeLSQMaxStoreBufferStoresPerCycle),
-    lvpu(lvpu_),
+        params.executeLSQMaxStoreBufferStoresPerCycle,
+        lvpu_),
     executeInfo(params.numThreads,
             ExecuteThreadInfo(params.executeCommitLimit)),
     interruptPriority(0),
@@ -392,14 +393,10 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
         // Compare prediction with value returned from memory.  Reissue if mispredicted
         const RegId &reg = inst->staticInst->destRegIdx(0);
         Addr pc = inst->pc->instAddr();
-        if (is_load and !reg.is(VecRegClass) and !lvpu->is_constant(pc)) {
+        if (is_load and !reg.is(VecRegClass) and !inst->constant_mem_bypass) {
             RegVal returned_value = context.thread.getReg(reg);
-            bool prediction_made = lvpu->is_predictable(pc) and !lvpu->is_constant(pc); // Get value now because is_predictable might change during prediction_results
+            bool prediction_made = lvpu->is_predictable(pc); // Get value now because is_predictable might change during prediction_results
             LVPU::PredictionResults results = lvpu->prediction_results(pc, returned_value);
-            
-            //TEST Removed later
-            Addr mem_addr = packet->req->getVaddr();
-            lvpu->add_cvt_entry(pc, mem_addr);
             if (results.entry_upgraded) {
                 //Add entry to CVT if is upgraded to constant
                 Addr mem_addr = packet->req->getVaddr();
@@ -516,7 +513,11 @@ Execute::executeMemRefInst(MinorDynInstPtr inst, BranchData &branch,
         Fault init_fault = inst->staticInst->initiateAcc(&context,
             inst->traceData);
 
-        if (inst->inLSQ) {
+        if (inst->constant_mem_bypass) {
+            /* Restore thread PC */
+            thread->pcState(*old_pc);
+            issued = true;
+        } else if (inst->inLSQ) {
             if (init_fault != NoFault) {
                 assert(inst->translationFault != NoFault);
                 // Translation faults are dealt with in handleMemResponse()
@@ -979,26 +980,17 @@ Execute::commitInst(MinorDynInstPtr inst, bool early_memory_issue,
          */
         bool predicate_passed = false;
 
-        bool completed_mem_inst;
-        Addr pc = inst->pc->instAddr();
-        // Don't run executeMemRefInst if load is a constant
+        bool completed_mem_inst = executeMemRefInst(inst, branch, predicate_passed, fault);
 
-        if (inst->staticInst->isLoad() and lvpu->is_constant(pc)) {
-            lvpu->stats.memory_bypasses++;
-            completed_mem_inst = true;
-        } else {
-            completed_mem_inst = executeMemRefInst(inst, branch,
-            predicate_passed, fault);
-        }
 
-        if (inst->staticInst->isLoad() and lvpu->is_predictable(pc)) {
+        if (inst->staticInst->isLoad() and lvpu->is_predictable(inst->pc->instAddr())) {
             // Write to register and free in scoreboard
             ExecContext context(cpu, *cpu.threads[thread_id], *this, inst);
             DPRINTF(LVPU,"numDestRegs: %i\n", inst->staticInst->numDestRegs());
             const RegId &reg = inst->staticInst->destRegIdx(0);
             
             scoreboard[thread_id].clearInstDests(inst, inst->isMemRef());
-            RegVal val = lvpu->read_entry(pc);
+            RegVal val = lvpu->read_entry(inst->pc->instAddr());
             context.thread.setReg(reg, val);
             DPRINTF(LVPU, "Setting reg with LVPT entry.  reg: %s, val: %s\n",
                 reg,
@@ -1225,8 +1217,8 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
             } else {
                 //TODO: If load is a constant, don't run handleMemResponse.
                 Addr pc = inst->pc->instAddr();
-                load_prediction_made = lvpu->is_predictable(pc) and !lvpu->is_constant(pc); // Assume if is_predictable == True, than a prediction was made.  Need to track here because the value can change within handleMemResponse
-                if (!lvpu->is_constant(pc)) {
+                load_prediction_made = lvpu->is_predictable(pc) and inst->constant_mem_bypass; // Assume if is_predictable == True, than a prediction was made.  Need to track here because the value can change within handleMemResponse
+                if (inst->constant_mem_bypass) {
                     handleMemResponse(inst, mem_response, branch, fault);
                 }
                 committed_inst = true;

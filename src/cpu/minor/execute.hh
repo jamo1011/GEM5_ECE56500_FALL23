@@ -123,9 +123,6 @@ class Execute : public Named
     /** Dcache port to pass on to the CPU.  Execute owns this */
     LSQ lsq;
 
-    /** Pointer to load value prediction unit */
-    LVPU* lvpu;
-
     /** Scoreboard of instruction dependencies */
     std::vector<Scoreboard> scoreboard;
 
@@ -134,6 +131,9 @@ class Execute : public Named
 
   public: /* Public for Pipeline to be able to pass it to Decode */
     std::vector<InputBuffer<ForwardInstData>> inputBuffer;
+
+    /** Pointer to load value prediction unit */
+    LVPU* lvpu;
 
   protected:
     /** Stage cycle-by-cycle state */

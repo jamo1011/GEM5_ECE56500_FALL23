@@ -115,6 +115,8 @@ class LVPU : public Named
     PredictionResults prediction_results(Addr pc, RegVal value);
 
     /** LCT functions */
+    int find_lct_entry(Addr pc);
+
     // Decreases saturating counter by one
     void decrement_counter(Addr pc);
 
@@ -129,7 +131,7 @@ class LVPU : public Named
     bool is_predictable(Addr pc);
 
     // Returns true if the given pc has a valid LVPT entry, classified as 'Constant' in LCT, and has an entry in CVT
-    bool is_constant(Addr pc);
+    bool is_constant(Addr pc, Addr mem_addr);
 
     Classification get_classification(Addr pc);
 

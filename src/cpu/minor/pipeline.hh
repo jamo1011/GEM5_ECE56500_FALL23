@@ -90,14 +90,14 @@ class Pipeline : public Ticked
     Fetch2 fetch2;
     Fetch1 fetch1;
 
-    LVPU lvpu;
-
     /** Activity recording for the pipeline.  This is access through the CPU
      *  by the pipeline stages but belongs to the Pipeline as it is the
      *  cleanest place to initialise it */
     MinorActivityRecorder activityRecorder;
 
   public:
+    LVPU lvpu;
+    
     /** Enumerated ids of the 'stages' for the activity recorder */
     enum StageId
     {

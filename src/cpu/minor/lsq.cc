@@ -46,10 +46,12 @@
 #include "cpu/minor/exec_context.hh"
 #include "cpu/minor/execute.hh"
 #include "cpu/minor/pipeline.hh"
+#include "cpu/minor/lvpu.hh"
 #include "cpu/utils.hh"
 #include "debug/Activity.hh"
 #include "debug/MinorMem.hh"
 #include "debug/TEST.hh"
+#include "debug/LVPU.hh"
 
 namespace gem5
 {
@@ -1406,7 +1408,8 @@ LSQ::LSQ(std::string name_, std::string dcache_port_name_,
     unsigned int in_memory_system_limit, unsigned int line_width,
     unsigned int requests_queue_size, unsigned int transfers_queue_size,
     unsigned int store_buffer_size,
-    unsigned int store_buffer_cycle_store_limit) :
+    unsigned int store_buffer_cycle_store_limit,
+    LVPU* lvpu_) :
     Named(name_),
     cpu(cpu_),
     execute(execute_),
@@ -1424,7 +1427,8 @@ LSQ::LSQ(std::string name_, std::string dcache_port_name_,
     numStoresInTransfers(0),
     numAccessesIssuedToMemory(0),
     retryRequest(NULL),
-    cacheBlockMask(~(cpu_.cacheLineSize() - 1))
+    cacheBlockMask(~(cpu_.cacheLineSize() - 1)),
+    lvpu(lvpu_)
 {
     if (in_memory_system_limit < 1) {
         fatal("%s: executeMaxAccessesInMemory must be >= 1 (%d)\n", name_,
@@ -1587,6 +1591,19 @@ LSQ::pushRequest(MinorDynInstPtr inst, bool isLoad, uint8_t *data,
                  uint64_t *res, AtomicOpFunctorPtr amo_op,
                  const std::vector<bool>& byte_enable)
 {
+    DPRINTF(LVPU, "pushRequest: pc: %s, mem_addr: %s\n", inst->pc->instAddr(), addr);
+    DPRINTF(LVPU, "%s", lvpu->valid_entry(inst->pc->instAddr()));
+    DPRINTF(LVPU, "TEST4\n");
+    bool constant = lvpu->is_constant(inst->pc->instAddr(), addr);
+    DPRINTF(LVPU, "TEST2\n");
+    if (isLoad && constant) {
+        DPRINTF(LVPU, "pushRequest: Load is constant, skipping memory access\n");
+        inst->constant_mem_bypass = true;
+        lvpu->stats.memory_bypasses++;
+        return NoFault;
+    }
+    DPRINTF(LVPU, "TEST5\n");
+
     assert(inst->translationFault == NoFault || inst->inLSQ);
 
     if (inst->inLSQ) {

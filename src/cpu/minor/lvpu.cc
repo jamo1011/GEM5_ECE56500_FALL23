@@ -71,6 +71,7 @@ void LVPU::add_entry(Addr pc) {
             "add_entry: Adding entry to LVPT. PC: %s, Number of entries: %s\n",
             pc,
             lvpt_table.size());
+        add_lct_entry(pc);
     } else {
         DPRINTF(LVPU,
             "add_entry: Entry already found in LVPT. PC: %s, Number of entries: %s\n",
@@ -161,7 +162,7 @@ LVPU::PredictionResults LVPU::prediction_results(Addr pc, RegVal value) {
             Classification new_classification = get_classification(pc);
             if (previous_classification == Predictable && new_classification == Constant) {
                 DPRINTF(LVPU, "prediction_results: Entry upgraded to constant. pc: %s\n", pc);
-                entry_upgraded == true;
+                entry_upgraded = true;
             }
             stats.num_predictions++;
             stats.correct_predictions++;
@@ -181,19 +182,82 @@ LVPU::PredictionResults LVPU::prediction_results(Addr pc, RegVal value) {
 }
 
 void LVPU::decrement_counter(Addr pc) {
-    //TODO
+    int min_value = 0; // Minimum value for the counter
+    int index = find_lct_entry(pc);
+    if (index != -1) {
+        if (lc_table[index].classification > min_value) {
+            lc_table[index].classification--;
+            DPRINTF(LVPU, "d_counter: decremented classification to %d\n",
+                lc_table[index].classification);
+        } else {
+            DPRINTF(LVPU, "d_counter: classification already at minimum (%d)\n", min_value);
+        }
+    }
     return;
 }
 
 void LVPU::increment_counter(Addr pc) {
-    //TODO
+    int max_value = (1 << bits_per_entry) - 1; // maximum value for the counter
+    int index = find_lct_entry(pc);
+    if (index != -1) {
+        if (lc_table[index].classification < max_value) {
+            lc_table[index].classification++;
+            DPRINTF(LVPU, "incre_counter: Incremented classification to %d\n",
+                lc_table[index].classification);
+        } else {
+            DPRINTF(LVPU, "incre_counter: classification already at maximum  (%d)\n", max_value);
+        }
+    }
     return;
+}
+
+int LVPU::find_lct_entry(long unsigned int pc) {
+    for (size_t i = 0; i < lc_table.size(); i++) {
+        if (lc_table[i].pc == pc) {
+            return i; // Entry found, return index
+        }
+    }
+    return -1; // Entry not found
 }
 
 void LVPU::add_lct_entry(Addr pc) {
     //TODO
     // Default classification to 0
-    return;
+
+    // check if  PC already exists in the LCT
+    if (find_lct_entry(pc) == -1) {
+
+        if (lc_table.size() >= num_lct_entries) {       //   LCT does not exceed  maximum number of entries
+
+
+            // Replace an existing entry based on classification
+            // remove the first entry classified as 'Unpredictable'
+
+            auto it = std::find_if(lc_table.begin(), lc_table.end(), [this](const lct_entry &entry) {
+                return this->get_classification(entry.pc) == Unpredictable;
+            });
+
+            if (it != lc_table.end()) {
+                DPRINTF(LVPU, "add_lct_entry: Replacing entry with PC: %lx\n", it->pc);
+                lc_table.erase(it);
+            } else {
+                DPRINTF(LVPU, "add_lct_entry: Unable to replace any entry in LCT.\n");
+                return;
+            }
+        }
+
+        //  a new LCT entry and add it to the table
+        struct lct_entry new_entry = {pc, 0}; // Default classification is Unpredictable
+        lc_table.push_back(new_entry);
+
+        DPRINTF(LVPU,
+            "add_lct_entry: Added entry to LCT. PC: %s, Total entries: %s\n",
+            pc, lc_table.size());
+    } else {
+        DPRINTF(LVPU,
+            "add_lct_entry: Entry already exists in LCT. PC: %s, Total entries: %s\n",
+            pc, lc_table.size());
+    }
 }
 
 bool LVPU::is_predictable(Addr pc) {
@@ -206,22 +270,66 @@ bool LVPU::is_predictable(Addr pc) {
     if (hacks == "never_predictable") {
         return false;
     }
-    return valid_entry(pc);
+    //TODO
+    // Predictable when lvpt has a valid entry and lct classified as predictable
+    // for 1 bit counter Predictable when classification == 1, unpredictable if classification == 0
+    // for 2 bit counter predictable when classification == 2 or 3, unpredictable if classification == 0 or 1
+
+    // ensure the entry exists and valid in LVPT
+    if (!valid_entry(pc)) {
+        return false; //
+    }
+
+    // Check LCT classification
+    int lct_index = find_lct_entry(pc);
+    if (lct_index == -1) {
+        return false; // not predictable if no LCT entry exist
+    }
+
+    Classification classification = get_classification(pc);
+    if (classification == Unpredictable) {
+        return false;
+    }
+    return true;
 }
 
-bool LVPU::is_constant(Addr pc) {
-    //TODO
-    // for 1 bit counter, constant if classification == 1
-    // for 2 bit counter, constant if classification == 3
+bool LVPU::is_constant(Addr pc, Addr mem_addr) {
     // Return true if classified as a constant and has an entry in cvt with matching pc
+    DPRINTF(LVPU, "TEST3\n");
+    if (hacks == "never_predictable") {
+        return false;
+    }
+    
+    DPRINTF(LVPU, "TEST1\n");
+    // Check for valid entry
+    if (!valid_entry(pc)) {
+        return false;
+    }
 
-    return false;
+    DPRINTF(LVPU, "TEST1\n");
+    int lct_index = find_lct_entry(pc);
+    if (lct_index == -1) {
+        return false;
+    }
+
+    DPRINTF(LVPU, "TEST1\n");
+    // Chack LCT for constant
+    LVPU::Classification classification = get_classification(pc);
+    if (!(classification == Constant)) {
+        return false;
+    } 
+    
+    DPRINTF(LVPU, "TEST1\n");
+    if (!verify_constant(pc, mem_addr)) {
+        return false;
+    }
+
+    return true;
 }
 
 LVPU::Classification LVPU::get_classification(Addr pc) {
-    return Constant;
-    /* int index = find_lct_entry(pc);
-    if (-1 != -1) {
+    int index = find_lct_entry(pc);
+    if (index != -1) {
         int classification = lc_table[index].classification;
         switch (bits_per_entry) {
             case 1:
@@ -244,7 +352,7 @@ LVPU::Classification LVPU::get_classification(Addr pc) {
                 }
         }
     }
-    return Unpredictable; */
+    return Unpredictable;
 }
 
 bool LVPU::verify_constant(Addr pc, Addr mem_addr) {
@@ -268,7 +376,6 @@ void LVPU::add_cvt_entry(Addr pc, Addr mem_addr) {
 std::vector<Addr> LVPU::update_store_addr(Addr mem_addr) {
     std::vector<Addr> entries_removed;
     for (int i = cv_table.size()-1; i >= 0; i--) {
-        DPRINTF(LVPU, "TEST5\n");
         if (cv_table[i].mem_addr == mem_addr) {
             DPRINTF(LVPU, "update_store_addr.  matching entry found for mem_addr: %s, downgrading entry: %s\n", mem_addr, cv_table[i].pc);
             entries_removed.push_back(cv_table[i].pc);
