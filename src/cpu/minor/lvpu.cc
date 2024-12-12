@@ -225,7 +225,6 @@ void LVPU::add_lct_entry(Addr pc) {
 
         if (lc_table.size() >= num_lct_entries) {       //   LCT does not exceed  maximum number of entries
 
-
             // Replace an existing entry based on classification
             // remove the first entry classified as 'Unpredictable'
 
@@ -291,31 +290,26 @@ bool LVPU::is_predictable(Addr pc) {
 
 bool LVPU::is_constant(Addr pc, Addr mem_addr) {
     // Return true if classified as a constant and has an entry in cvt with matching pc
-    DPRINTF(LVPU, "TEST3\n");
     if (hacks == "never_predictable") {
         return false;
     }
     
-    DPRINTF(LVPU, "TEST1\n");
     // Check for valid entry
     if (!valid_entry(pc)) {
         return false;
     }
 
-    DPRINTF(LVPU, "TEST1\n");
     int lct_index = find_lct_entry(pc);
     if (lct_index == -1) {
         return false;
     }
 
-    DPRINTF(LVPU, "TEST1\n");
     // Chack LCT for constant
     LVPU::Classification classification = get_classification(pc);
     if (!(classification == Constant)) {
         return false;
     } 
     
-    DPRINTF(LVPU, "TEST1\n");
     if (!verify_constant(pc, mem_addr)) {
         return false;
     }
@@ -364,11 +358,11 @@ void LVPU::add_cvt_entry(Addr pc, Addr mem_addr) {
     //TODO
     // Loads are indexed by both the load address and the memory address
     if (cv_table.size() <= num_cvt_entries) {
-        DPRINTF(LVPU, "Adding entry to CVT. pc: %s, mem_addr: %s", pc, mem_addr);
+        DPRINTF(LVPU, "Adding entry to CVT. pc: %s, mem_addr: %s\n", pc, mem_addr);
         struct cvt_entry entry = {pc, mem_addr};
         cv_table.push_back(entry);
     } else {
-        DPRINTF(LVPU, "CVT full.  Not adding entry. pc: %s, mem_addr: %s", pc, mem_addr);
+        DPRINTF(LVPU, "CVT full.  Not adding entry. pc: %s, mem_addr: %s\n", pc, mem_addr);
     }
     return;
 }

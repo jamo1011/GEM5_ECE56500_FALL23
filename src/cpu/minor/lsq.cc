@@ -50,7 +50,6 @@
 #include "cpu/utils.hh"
 #include "debug/Activity.hh"
 #include "debug/MinorMem.hh"
-#include "debug/TEST.hh"
 #include "debug/LVPU.hh"
 
 namespace gem5
@@ -1482,7 +1481,6 @@ LSQ::step()
 {
     /* Try to move address-translated requests between queues and issue
      *  them */
-    DPRINTF(LVPU, "TEST6\n");
     if (!requests.empty())
         tryToSendToTransfers(requests.front());
 
@@ -1594,18 +1592,14 @@ LSQ::pushRequest(MinorDynInstPtr inst, bool isLoad, uint8_t *data,
                  const std::vector<bool>& byte_enable)
 {
     DPRINTF(LVPU, "pushRequest: pc: %s, mem_addr: %s\n", inst->pc->instAddr(), addr);
-    DPRINTF(LVPU, "%s", lvpu->valid_entry(inst->pc->instAddr()));
-    DPRINTF(LVPU, "TEST4\n");
     bool constant = lvpu->is_constant(inst->pc->instAddr(), addr);
     inst->constant_mem_bypass = false;
-    DPRINTF(LVPU, "TEST2\n");
     if (isLoad && constant) {
         DPRINTF(LVPU, "pushRequest: Load is constant, skipping memory access\n");
         inst->constant_mem_bypass = true;
         lvpu->stats.memory_bypasses++;
         return NoFault;
     }
-    DPRINTF(LVPU, "TEST5\n");
 
     assert(inst->translationFault == NoFault || inst->inLSQ);
 
@@ -1680,8 +1674,6 @@ LSQ::pushRequest(MinorDynInstPtr inst, bool isLoad, uint8_t *data,
     requests.push(request);
     inst->inLSQ = true;
     request->startAddrTranslation();
-    DPRINTF(TEST, "pushRequest: %s\n", request->request->hasVaddr());
-    DPRINTF(TEST, "pushRequest vaddr: %s\n", request->request->getVaddr());
 
     return inst->translationFault;
 }
@@ -1689,7 +1681,6 @@ LSQ::pushRequest(MinorDynInstPtr inst, bool isLoad, uint8_t *data,
 void
 LSQ::pushFailedRequest(MinorDynInstPtr inst)
 {
-    DPRINTF(LVPU, "TEST8\n");
     LSQRequestPtr request = new FailedDataRequest(*this, inst);
     requests.push(request);
 }

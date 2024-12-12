@@ -399,7 +399,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             LVPU::PredictionResults results = lvpu->prediction_results(pc, returned_value);
             if (results.entry_upgraded) {
                 //Add entry to CVT if is upgraded to constant
-                DPRINTF(LVPU, "Entry upgraded to constant: pc: %s", pc);
+                DPRINTF(LVPU, "Entry upgraded to constant: pc: %s\n", pc);
                 Addr mem_addr = packet->req->getVaddr();
                 lvpu->add_cvt_entry(pc, mem_addr);
             }
@@ -558,7 +558,6 @@ Execute::executeMemRefInst(MinorDynInstPtr inst, BranchData &branch,
              * mis-prediction. */
             if (!inst->inLSQ && !inst->constant_mem_bypass) {
                 /* Leave it up to commit to handle the fault */
-                DPRINTF(LVPU, "TEST9\n");
                 lsq.pushFailedRequest(inst);
                 inst->inLSQ = true;
             }
@@ -1230,6 +1229,13 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
                     doInstCommitAccounting(inst);
                 }
                 committed_inst = true;
+                ThreadID thread_id = inst->id.threadId;
+                ExecContext context(cpu, *cpu.threads[thread_id], *this, inst);
+                const RegId &reg = inst->staticInst->destRegIdx(0);
+                if (inst->staticInst->isLoad() and !reg.is(VecRegClass)) {
+                    RegVal returned_value = context.thread.getReg(reg);
+                    DPRINTF(TEST, "Load val: %s\n", returned_value);
+                }
             }
 
             completed_mem_ref = true;
@@ -1641,7 +1647,6 @@ Execute::evaluate()
                 head_inst_might_commit = true;
             } else {
                 FUPipeline *fu = funcUnits[head_inst.inst->fuIndex];
-                DPRINTF(LVPU,"TEST10\n");
                 if ((fu->stalled &&
                      fu->front().inst->id == head_inst.inst->id) ||
                      head_inst.inst->constant_mem_bypass ||
@@ -1792,7 +1797,6 @@ Execute::getCommittingThread()
             QueuedInst *head_inflight_inst = &(ex_info.inFlightInsts->front());
             MinorDynInstPtr inst = head_inflight_inst->inst;
 
-            DPRINTF(LVPU, "TEST11: inLSQ: %s\n", inst->inLSQ);
             can_commit_insts = can_commit_insts &&
                 (!inst->inLSQ || (lsq.findResponse(inst) != NULL));
 
@@ -1822,7 +1826,6 @@ Execute::getCommittingThread()
 
                 can_commit_insts = can_commit_insts &&
                     (can_transfer_mem_inst || can_execute_fu_inst);
-                DPRINTF(LVPU, "TEST12: can_commit: %s\n", can_commit_insts);
             }
         }
 
