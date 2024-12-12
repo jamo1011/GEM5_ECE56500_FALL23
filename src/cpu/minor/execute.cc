@@ -1226,6 +1226,8 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
                 load_prediction_made = lvpu->is_predictable(pc) and !inst->constant_mem_bypass; // Assume if is_predictable == True, than a prediction was made.  Need to track here because the value can change within handleMemResponse
                 if (!inst->constant_mem_bypass) {
                     handleMemResponse(inst, mem_response, branch, fault);
+                } else {
+                    doInstCommitAccounting(inst);
                 }
                 committed_inst = true;
             }

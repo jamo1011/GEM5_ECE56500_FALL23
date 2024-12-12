@@ -363,9 +363,13 @@ bool LVPU::verify_constant(Addr pc, Addr mem_addr) {
 void LVPU::add_cvt_entry(Addr pc, Addr mem_addr) {
     //TODO
     // Loads are indexed by both the load address and the memory address
-    DPRINTF(LVPU, "Adding entry to CVT. pc: %s, mem_addr: %s", pc, mem_addr);
-    struct cvt_entry entry = {pc, mem_addr};
-    cv_table.push_back(entry);
+    if (cv_table.size() <= num_cvt_entries) {
+        DPRINTF(LVPU, "Adding entry to CVT. pc: %s, mem_addr: %s", pc, mem_addr);
+        struct cvt_entry entry = {pc, mem_addr};
+        cv_table.push_back(entry);
+    } else {
+        DPRINTF(LVPU, "CVT full.  Not adding entry. pc: %s, mem_addr: %s", pc, mem_addr);
+    }
     return;
 }
 
